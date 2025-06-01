@@ -144,7 +144,7 @@ function Navbar() {
       </style>
       <div className="nav-container">
         <h1 className="logo" onClick={() => navigate("/")}>
-          Folktale Haven
+          Folktale संसार
         </h1>
 
         <div className="search-container">
