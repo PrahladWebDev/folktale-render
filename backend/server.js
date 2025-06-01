@@ -12,7 +12,7 @@ connectDB();
 
 const __dirname = path.resolve();
 const corsOptions = {
-    orogin : 'http://localhost:5173',
+    orogin : 'https://folktale-render.onrender.com',
     credentials: true
 }
 
