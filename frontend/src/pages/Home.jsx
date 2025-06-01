@@ -31,7 +31,7 @@ function Home() {
         }
       });
       try {
-        const response = await axios.get(`http://localhost:5000/api/folktales?${apiQuery.toString()}`);
+        const response = await axios.get(`/api/folktales?${apiQuery.toString()}`);
         setFolktales(response.data.folktales);
         setTotal(response.data.total);
       } catch (error) {
@@ -41,7 +41,7 @@ function Home() {
 
     const fetchPopular = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/folktales/popular');
+        const response = await axios.get('/api/folktales/popular');
         setPopular(response.data);
       } catch (error) {
         console.error('Error fetching popular folktales:', error);

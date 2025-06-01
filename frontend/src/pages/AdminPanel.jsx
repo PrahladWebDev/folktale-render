@@ -25,7 +25,7 @@ function AdminPanel() {
   useEffect(() => {
     const fetchFolktales = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/admin/folktales', {
+        const response = await axios.get('/api/admin/folktales', {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000, // 10 seconds timeout for fetching
         });
@@ -103,7 +103,7 @@ function AdminPanel() {
 
       if (editId) {
         // Update folktale
-        await axios.put(`http://localhost:5000/api/folktales/${editId}`, formData, config);
+        await axios.put(`/api/folktales/${editId}`, formData, config);
         setEditId(null);
       } else {
         // Create new folktale
@@ -112,7 +112,7 @@ function AdminPanel() {
           setIsUploading(false);
           return;
         }
-        await axios.post('http://localhost:5000/api/folktales', formData, config);
+        await axios.post('/api/folktales', formData, config);
       }
 
       // Reset form
@@ -123,7 +123,7 @@ function AdminPanel() {
       setIsUploading(false);
 
       // Refresh folktales list
-      const response = await axios.get('http://localhost:5000/api/admin/folktales', {
+      const response = await axios.get('/api/admin/folktales', {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
@@ -162,7 +162,7 @@ function AdminPanel() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this folktale?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/folktales/${id}`, {
+        await axios.delete(`/api/admin/folktales/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000,
         });

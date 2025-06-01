@@ -8,7 +8,7 @@ function RandomFolktale() {
 
   const fetchRandomFolktale = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/folktales/random');
+      const response = await axios.get('/api/folktales/random');
       setFolktale(response.data);
     } catch (error) {
       console.error("Failed to fetch folktale:", error);

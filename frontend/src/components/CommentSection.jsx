@@ -12,7 +12,7 @@ function CommentSection({ folktaleId }) {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/folktales/${folktaleId}/comments`);
+        const response = await axios.get(`/api/folktales/${folktaleId}/comments`);
         setComments(response.data);
       } catch (error) {
         console.error('Error fetching comments:', error);
@@ -36,7 +36,7 @@ function CommentSection({ folktaleId }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/folktales/${folktaleId}/comments`,
+        `/api/folktales/${folktaleId}/comments`,
         { content },
         { headers: { Authorization: `Bearer ${token}` } }
       );

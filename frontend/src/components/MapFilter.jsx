@@ -207,7 +207,7 @@ const CountryMap = () => {
 
           try {
             const response = await fetch(
-              `http://localhost:5000/api/folktales?region=${encodeURIComponent(country)}`
+              `/api/folktales?region=${encodeURIComponent(country)}`
             );
             const data = await response.json();
             
