@@ -80,7 +80,7 @@ function CommentSection({ folktaleId }) {
               <div style={styles.commentHeader}>
                 <span style={styles.commentAuthor}>{comment.userId.username}</span>
                 <span style={styles.commentDate}>
-                  {new Date(comment.createdAt).toLocaleString('en-US', {
+                  {new Date(comment.timestamp).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
