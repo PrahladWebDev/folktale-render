@@ -1,36 +1,63 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function CommentSection({ folktaleId }) {
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState('');
-  const [alert, setAlert] = useState(null); // State for alert message
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const response = await axios.get(`/api/folktales/${folktaleId}/comments`);
-        setComments(response.data);
+        if (!folktaleId) {
+          toast.error('Invalid folktale ID');
+          return;
+        }
+
+        const response = await axios.get(`/api/folktales/${folktaleId}/comments`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setComments(response.data.data || []);
       } catch (error) {
         console.error('Error fetching comments:', error);
-        setAlert({ type: 'error', message: 'Failed to load comments. Please try again.' });
+        const errorMessage = handleError(error);
+        toast.error(errorMessage);
       }
     };
     fetchComments();
-  }, [folktaleId]);
+  }, [folktaleId, token]);
+
+  const handleError = (error) => {
+    const errorData = error.response?.data;
+    const errorCode = errorData?.error;
+    const message = errorData?.message || 'An unexpected error occurred';
+
+    switch (errorCode) {
+      case 'invalid_id':
+        return 'Invalid folktale ID format';
+      case 'not_found':
+        return 'Folktale not found';
+      case 'server_error':
+        return 'Failed to load comments due to a server issue. Please try again later.';
+      default:
+        return message;
+    }
+  };
 
   const handleComment = async () => {
     if (!token) {
-      setAlert({ type: 'warning', message: 'Please log in to post a comment.' });
-      setTimeout(() => navigate('/login'), 2000); // Navigate after showing alert
+      toast.warn('Please log in to post a comment.');
+      setTimeout(() => navigate('/login'), 2000);
       return;
     }
 
     if (!content.trim()) {
-      setAlert({ type: 'warning', message: 'Comment cannot be empty.' });
+      toast.warn('Comment cannot be empty.');
       return;
     }
 
@@ -40,96 +67,122 @@ function CommentSection({ folktaleId }) {
         { content },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setComments([...comments, response.data]);
+
+      setComments([...comments, response.data.data]);
       setContent('');
-      setAlert({ type: 'success', message: 'Comment posted successfully!' });
+      toast.success('Comment posted successfully!');
     } catch (error) {
       console.error('Error posting comment:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to post comment. Please try again.';
-      setAlert({ type: 'error', message: errorMessage });
+      const errorData = error.response?.data;
+      const errorCode = errorData?.error;
+      let errorMessage = errorData?.message || 'Failed to post comment';
+
+      switch (errorCode) {
+        case 'validation_error':
+          errorMessage = errorData.details?.map(err => err.msg).join(', ') || 'Invalid comment data';
+          break;
+        case 'invalid_id':
+          errorMessage = 'Invalid folktale ID format';
+          break;
+        case 'not_found':
+          errorMessage = 'Folktale not found';
+          break;
+        case 'already_commented':
+          errorMessage = 'You have already commented on this folktale';
+          break;
+        case 'auth_required':
+          errorMessage = 'Authentication required. Please log in again.';
+          setTimeout(() => navigate('/login'), 2000);
+          break;
+        case 'invalid_token':
+        case 'token_expired':
+          errorMessage = 'Your session has expired. Please log in again.';
+          localStorage.removeItem('token');
+          setTimeout(() => navigate('/login'), 2000);
+          break;
+        case 'server_error':
+          errorMessage = 'Failed to post comment due to a server issue. Please try again later.';
+          break;
+      }
+      toast.error(errorMessage);
     }
   };
 
-  // Clear alert after 3 seconds
-  useEffect(() => {
-    if (alert) {
-      const timer = setTimeout(() => setAlert(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [alert]);
-
   return (
-    <div style={styles.container}>
-      {alert && (
-        <div style={{
-          ...styles.alert,
-          backgroundColor: alert.type === 'success' ? '#d4edda' : '#f8d7da',
-          color: alert.type === 'success' ? '#155724' : '#721c24',
-          borderColor: alert.type === 'success' ? '#c3e6cb' : '#f5c6cb',
-        }}>
-          {alert.message}
-        </div>
-      )}
-
-      <h3 style={styles.title}>Comments ({comments.length})</h3>
-      
-      <div style={styles.commentsList}>
+    <div className="mt-10 p-6 bg-amber-50 rounded-lg border border-amber-200">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
+      <h3 className="text-2xl font-serif text-amber-900 mb-5 pb-2 border-b-2 border-amber-200">
+        Comments ({comments.length})
+      </h3>
+      <div className="max-h-[500px] overflow-y-auto pr-2 mb-8">
         {comments.length > 0 ? (
           comments.map((comment) => (
-            <div key={comment._id} style={styles.comment}>
-              <div style={styles.commentHeader}>
-                <span style={styles.commentAuthor}>{comment.userId.username}</span>
-                <span style={styles.commentDate}>
+            <div
+              key={comment._id}
+              className="bg-white rounded-md p-4 mb-4 shadow-sm"
+            >
+              <div className="flex justify-between items-center flex-wrap gap-2 mb-2">
+                <span className="font-semibold text-amber-900">
+                  {comment.userId?.username || 'Anonymous'}
+                </span>
+                <span className="text-sm text-gray-500">
                   {new Date(comment.timestamp).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
                   })}
                 </span>
               </div>
-              <p style={styles.commentContent}>{comment.content}</p>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {comment.content}
+              </p>
             </div>
           ))
         ) : (
-          <p style={styles.noComments}>No comments yet. Be the first to share your thoughts!</p>
+          <p className="text-center text-gray-500 italic py-5">
+            No comments yet. Be the first to share your thoughts!
+          </p>
         )}
       </div>
-
       {token ? (
-        <div style={styles.commentForm}>
+        <div className="mt-5">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Share your thoughts about this folktale..."
-            style={styles.textarea}
+            className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 font-serif text-base resize-y focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
-          <button 
+          <button
             onClick={handleComment}
-            style={{
-              ...styles.submitButton,
-              ...(content.trim() ? {} : styles.submitButtonDisabled)
-            }}
             disabled={!content.trim()}
+            className={`mt-2 px-4 py-2 rounded-md text-white font-medium transition-colors duration-300 ${
+              content.trim()
+                ? 'bg-amber-900 hover:bg-amber-800'
+                : 'bg-gray-400 cursor-not-allowed'
+            }`}
           >
             Post Comment
           </button>
         </div>
       ) : (
-        <div style={styles.loginPrompt}>
-          <p style={styles.loginText}>
+        <div className="text-center p-4 bg-white rounded-md">
+          <p className="text-gray-600">
             Please{' '}
-            <a 
-              href="/login" 
-              style={styles.loginLink}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/login');
-              }}
+            <button
+              onClick={() => navigate('/login')}
+              className="text-amber-600 font-semibold hover:underline"
             >
               log in
-            </a>{' '}
+            </button>{' '}
             to comment.
           </p>
         </div>
@@ -137,114 +190,5 @@ function CommentSection({ folktaleId }) {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    marginTop: '40px',
-    padding: '25px',
-    backgroundColor: '#f9f5e9',
-    borderRadius: '8px',
-    border: '1px solid #e0c9a6'
-  },
-  alert: {
-    padding: '10px 15px',
-    marginBottom: '20px',
-    borderRadius: '4px',
-    border: '1px solid',
-    fontSize: '1rem',
-    textAlign: 'center',
-    fontFamily: "'Merriweather', serif"
-  },
-  title: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '1.5rem',
-    color: '#5c3c10',
-    marginBottom: '20px',
-    paddingBottom: '10px',
-    borderBottom: '2px solid #e0c9a6'
-  },
-  commentsList: {
-    marginBottom: '30px',
-    maxHeight: '500px',
-    overflowY: 'auto',
-    paddingRight: '10px'
-  },
-  comment: {
-    backgroundColor: '#fff',
-    borderRadius: '6px',
-    padding: '15px',
-    marginBottom: '15px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-  },
-  commentHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '10px',
-    flexWrap: 'wrap'
-  },
-  commentAuthor: {
-    fontWeight: '600',
-    color: '#5c3c10'
-  },
-  commentDate: {
-    fontSize: '0.85rem',
-    color: '#777'
-  },
-  commentContent: {
-    margin: '0',
-    lineHeight: '1.6',
-    whiteSpace: 'pre-wrap'
-  },
-  noComments: {
-    textAlign: 'center',
-    color: '#777',
-    fontStyle: 'italic',
-    padding: '20px'
-  },
-  commentForm: {
-    marginTop: '20px'
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '100px',
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #ddd',
-    fontFamily: "'Merriweather', serif",
-    fontSize: '1rem',
-    marginBottom: '10px',
-    resize: 'vertical'
-  },
-  submitButton: {
-    backgroundColor: '#5c3c10',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '10px 20px',
-    fontSize: '1rem',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s'
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
-    cursor: 'not-allowed'
-  },
-  loginPrompt: {
-    textAlign: 'center',
-    padding: '15px',
-    backgroundColor: '#fff',
-    borderRadius: '6px'
-  },
-  loginText: {
-    margin: '0',
-    color: '#555'
-  },
-  loginLink: {
-    color: '#d4a017',
-    fontWeight: '600',
-    textDecoration: 'none'
-  }
-};
 
 export default CommentSection;
