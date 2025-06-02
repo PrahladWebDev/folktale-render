@@ -11,15 +11,15 @@ import fs from 'fs/promises'; // Use promises version for async/await
 
 const router = express.Router();
 
-// Set up Multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, '/tmp'); // ✅ Writable in Render environment
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
+
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
