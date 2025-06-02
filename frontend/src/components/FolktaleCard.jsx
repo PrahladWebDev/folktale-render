@@ -1,121 +1,71 @@
 import { Link } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function FolktaleCard({ folktale }) {
-  const averageRating = folktale.ratings.length
-    ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1)
+  // Validate folktale prop
+  if (!folktale || !folktale._id) {
+    toast.error('Invalid folktale data provided.');
+    return null;
+  }
+
+  const averageRating = folktale.ratings?.length
+    ? (folktale.ratings.reduce((sum, r) => sum + (r.rating || 0), 0) / folktale.ratings.length).toFixed(1)
     : 'No ratings';
 
   return (
-    <Link to={`/folktale/${folktale._id}`} className="folktale-card" style={styles.card}>
-      <div style={styles.imageContainer}>
+    <Link
+      to={`/folktale/${folktale._id}`}
+      className="block bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 text-gray-800 no-underline h-full"
+    >
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
+      <div className="relative pt-[60%] overflow-hidden bg-amber-50 flex items-center justify-center">
         <img
-          src={folktale.imageUrl}
-          alt={folktale.title}
-          style={styles.image}
+          src={folktale.imageUrl || '/placeholder.jpg'}
+          alt={folktale.title || 'Folktale'}
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full object-contain transition-transform duration-300"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = '';
+            e.target.src = '/placeholder.jpg';
+            toast.warn(`Failed to load image for "${folktale.title || 'folktale'}". Using placeholder.`);
           }}
         />
       </div>
-      <div style={styles.content}>
-        <h3 style={styles.title}>{folktale.title}</h3>
-        <div style={styles.meta}>
-          <p style={styles.metaItem}>
-            <span style={styles.metaLabel}>Region:</span> {folktale.region}
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-amber-900 font-serif mb-3 min-h-[3.9em] line-clamp-2">
+          {folktale.title || 'Untitled Folktale'}
+        </h3>
+        <div className="mb-3">
+          <p className="text-sm text-gray-600 mb-1">
+            <span className="font-semibold text-amber-900">Region:</span>{' '}
+            {folktale.region || 'Unknown'}
           </p>
-          <p style={styles.metaItem}>
-            <span style={styles.metaLabel}>Genre:</span> {folktale.genre}
+          <p className="text-sm text-gray-600 mb-1">
+            <span className="font-semibold text-amber-900">Genre:</span>{' '}
+            {folktale.genre || 'Unknown'}
           </p>
-          <p style={styles.metaItem}>
-            <span style={styles.metaLabel}>Age Group:</span> {folktale.ageGroup}
+          <p className="text-sm text-gray-600">
+            <span className="font-semibold text-amber-900">Age Group:</span>{' '}
+            {folktale.ageGroup || 'Unknown'}
           </p>
         </div>
-        <div style={styles.rating}>
-          <span style={styles.ratingText}>Rating:</span>
-          <span style={styles.ratingValue}>
+        <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+          <span className="text-sm text-gray-600">Rating:</span>
+          <span className="font-semibold text-amber-600">
             {averageRating}
-            <span style={styles.star}>⭐</span>
+            <span className="ml-1">⭐</span>
           </span>
         </div>
       </div>
     </Link>
   );
 }
-
-const styles = {
-  card: {
-    display: 'block',
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    textDecoration: 'none',
-    color: '#333',
-    height: '100%',
-  },
-  imageContainer: {
-    position: 'relative',
-    paddingTop: '60%', // Maintains a 5:3 aspect ratio
-    overflow: 'hidden',
-    backgroundColor: '#f9f5e9', // Background color for letterboxing
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  image: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)', // Center the image
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain', // Ensure entire image is visible
-    transition: 'transform 0.3s ease',
-  },
-  content: {
-    padding: '16px',
-  },
-  title: {
-    margin: '0 0 12px 0',
-    fontSize: '1.2rem',
-    fontWeight: '600',
-    color: '#5c3c10',
-    fontFamily: "'Playfair Display', serif",
-    minHeight: '3em',
-    lineHeight: '1.3',
-  },
-  meta: {
-    marginBottom: '12px',
-  },
-  metaItem: {
-    margin: '4px 0',
-    fontSize: '0.9rem',
-    color: '#666',
-  },
-  metaLabel: {
-    fontWeight: '600',
-    color: '#5c3c10',
-  },
-  rating: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: '8px',
-    borderTop: '1px solid #eee',
-  },
-  ratingText: {
-    fontSize: '0.9rem',
-    color: '#666',
-  },
-  ratingValue: {
-    fontWeight: '600',
-    color: '#d4a017',
-  },
-  star: {
-    marginLeft: '4px',
-  },
-};
 
 export default FolktaleCard;
