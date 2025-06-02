@@ -1,128 +1,93 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function RandomFolktale() {
   const [folktale, setFolktale] = useState(null);
-  const intervalTime = 2000; // time in milliseconds (2000 = 2 seconds)
+  const intervalTime = 2000; // 2 seconds
 
   const fetchRandomFolktale = async () => {
     try {
       const response = await axios.get('/api/folktales/random');
-      setFolktale(response.data);
+      const data = response.data.data;
+      if (!data || !data?._id) {
+        throw new Error('Invalid folktale data received');
+      }
+      setFolktale(data);
+      toast.success('New random folktale loaded!');
     } catch (error) {
-      console.error("Failed to fetch folktale:", error);
+      console.error('Failed to fetch folktale:', error);
+      const errorMessage = handleError(error);
+      toast.error(errorMessage);
+      setFolktale(null); // Clear folktale on error to show loading state
+    }
+  };
+
+  const handleError = (error) => {
+    const errorData = error.response?.data;
+    const errorCode = errorData?.error;
+    const message = errorData?.message || error.message || 'An unexpected error occurred';
+
+    switch (errorCode) {
+      case 'not_found':
+        return 'No folktales available at the moment.';
+      case 'server_error':
+        return 'Failed to load a random folktale due to a server error.';
+      default:
+        return errorMessage;
     }
   };
 
   useEffect(() => {
-    fetchRandomFolktale(); // fetch once immediately
+    fetchRandomFolktale(); // Initial fetch
     const interval = setInterval(fetchRandomFolktale, intervalTime);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array for stable interval
 
   return (
-    <div style={styles.container}>
+    <div className="mx-auto max-w-md bg-white rounded-xl p-6 my-8 shadow-sm border border-amber-100 text-center">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
       {!folktale ? (
-        <p>Loading folktale...</p>
+        <p className="text-gray-600">Loading folktale...</p>
       ) : (
         <>
-          <h3 style={styles.folktaleTitle}>{folktale.title}</h3>
-          <div style={styles.card}>
-            <Link to={`/folktale/${folktale._id}`} style={styles.link}>
-              <div style={styles.imageContainer}>
-                <img
-                  src={folktale.imageUrl}
-                  alt={folktale.title}
-                  style={styles.image}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'https://via.placeholder.com/600x400?text=Folktale+Image';
-                  }}
-                />
-              </div>
-            </Link>
-            {/* Optional refresh button */}
-            {/* <button
-              style={styles.refreshButton}
-              onClick={fetchRandomFolktale}
-            >
-              <span style={styles.buttonIcon}>⟳</span> Discover Another Tale
-            </button> */}
-          </div>
-        </>
+            <h3 className="text-xl font-serif text-gray-900 mb-4"> {folktale.title || 'Untitled Folktale'}</h3>
+            <div className="flex-col items-center>
+              <Link to={`/folktale/${folktale._id}`} className="block w-full">
+                <div className="w-full max-h-[400px] overflow-hidden rounded-lg mb-4 shadow-md flex justify-center items-center bg-gray-100">
+                  <img
+                    src={folktale.imageUrl || '/placeholder.jpg'}
+                    alt={folktale.title || 'Folktale'}
+                    className="w-full h-full object-contain max-h-[400px] transition-transform duration-300 hover:scale-105"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/placeholder.jpg';
+                      toast.warn('Failed to load folktale image. Using placeholder.');
+                    }}
+                  />
+                </div>
+              </Link>
+              {/* Optional refresh button */}
+              {/* <button
+                onClick={fetchRandomFolktale}
+                className="mt-4 px-6 py-2 bg-amber-800 text-amber-50 rounded-md font-semibold flex items-center gap-2 mx-auto hover:bg-amber-700 transition-all duration-300"
+              >
+                <span className="text-lg">⟳</span> Discover Another Tale
+              </button> */}
+            </div>
+          </>
       )}
     </div>
   );
 }
-
-const styles = {
-  container: {
-    backgroundColor: '#fff8ee',
-    borderRadius: '12px',
-    padding: '2rem',
-    margin: '2rem 0',
-    boxShadow: '0 4px 12px rgba(92, 60, 16, 0.1)',
-    textAlign: 'center',
-    border: '1px solid #e0c9a6',
-    maxWidth: '600px',
-    marginLeft: 'auto',
-    marginRight: 'auto'
-  },
-  folktaleTitle: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '1.4rem',
-    color: '#3a3a3a',
-    margin: '0.5rem 0 1rem',
-    transition: 'color 0.3s ease'
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center'
-  },
-  link: {
-    textDecoration: 'none',
-    color: 'inherit',
-    width: '100%'
-  },
-  imageContainer: {
-    width: '100%',
-    maxHeight: '400px',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    marginBottom: '1rem',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5'
-  },
-  image: {
-    width: '100%',
-    height: 'auto',
-    maxHeight: '400px',
-    objectFit: 'contain',
-    transition: 'transform 0.3s ease'
-  },
-  refreshButton: {
-    backgroundColor: '#5c3c10',
-    color: '#f9f5e9',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '0.8rem 1.5rem',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    marginTop: '1rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem'
-  },
-  buttonIcon: {
-    fontSize: '1.2rem'
-  }
-};
 
 export default RandomFolktale;
