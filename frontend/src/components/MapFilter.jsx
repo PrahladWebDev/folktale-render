@@ -1,301 +1,236 @@
-import React, { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useNavigate } from "react-router-dom";
-import styled, { keyframes } from "styled-components";
+import React, { useEffect, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// Animations
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideUp = keyframes`
-  from { 
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to { 
-    transform: translateY(0);
-    opacity: 1;
-  }
-`;
-
-// Styled Components
-const MapContainer = styled.div`
-  width: 100%;
-  height: calc(100vh - 120px);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-top: 16px;
-
-  @media (max-width: 768px) {
-    height: calc(100vh - 100px);
-  }
-`;
-
-const Title = styled.h2`
-  text-align: center;
-  padding: 20px 0;
-  margin: 0;
-  color: #2d3748;
-  font-size: 1.8rem;
-  font-weight: 600;
-  background: linear-gradient(90deg, #f6f9fc, #ffffff);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-
-  @media (max-width: 768px) {
-    font-size: 1.4rem;
-    padding: 16px 0;
-  }
-`;
-
-const ModalBackdrop = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: ${fadeIn} 0.3s ease-out;
-  backdrop-filter: blur(4px);
-`;
-
-const ModalContent = styled.div`
-  background-color: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  animation: ${slideUp} 0.3s ease-out;
-  
-  @media (max-width: 480px) {
-    width: 95%;
-    padding: 16px;
-  }
-`;
-
-const ModalTitle = styled.h3`
-  margin: 0 0 20px 0;
-  color: #2d3748;
-  font-size: 1.5rem;
-  font-weight: 600;
-  text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-`;
-
-const FolktaleList = styled.ul`
-  list-style: none;
-  padding: 0;
-  margin: 0;
-`;
-
-const FolktaleItem = styled.li`
-  padding: 12px 16px;
-  border-bottom: 1px solid #edf2f7;
-  cursor: pointer;
-  color: #3182ce;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  margin: 4px 0;
-
-  &:hover {
-    background-color: #ebf8ff;
-    color: #2c5282;
-    transform: translateX(4px);
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const CloseButton = styled.button`
-  display: block;
-  margin: 20px auto 0;
-  padding: 10px 24px;
-  background-color: #3182ce;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: #2c5282;
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const LoadingIndicator = styled.div`
-  text-align: center;
-  padding: 20px;
-  color: #4a5568;
-`;
-
-const CountryMap = () => {
+function CountryMap() {
   const mapRef = useRef(null);
   const navigate = useNavigate();
-
   const [folktales, setFolktales] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const map = new maplibregl.Map({
-      container: mapRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
-      center: [0, 20],
-      zoom: 1.5,
-    });
-
-    map.on("load", () => {
-      map.addSource("countries", {
-        type: "geojson",
-        data: "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: mapRef.current,
+        style: 'https://demotiles.maplibre.org/style.json',
+        center: [0, 20],
+        zoom: 1.5,
       });
 
-      map.addLayer({
-        id: "country-fill",
-        type: "fill",
-        source: "countries",
-        paint: {
-          "fill-color": [
-            'case',
-            ['boolean', ['feature-state', 'hover'], false],
-            '#63b3ed',
-            '#4299e1'
-          ],
-          "fill-opacity": 0.1,
-        },
-      });
+      map.on('load', () => {
+        try {
+          map.addSource('countries', {
+            type: 'geojson',
+            data: 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json',
+          });
 
-      map.addLayer({
-        id: "country-border",
-        type: "line",
-        source: "countries",
-        paint: {
-          "line-color": "#2d3748",
-          "line-width": 1,
-        },
-      });
+          map.addLayer({
+            id: 'country-fill',
+            type: 'fill',
+            source: 'countries',
+            paint: {
+              'fill-color': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                '#63b3ed',
+                '#4299e1',
+              ],
+              'fill-opacity': 0.1,
+            },
+          });
 
-      let hoveredCountryId = null;
+          map.addLayer({
+            id: 'country-border',
+            type: 'line',
+            source: 'countries',
+            paint: {
+              'line-color': '#2d3748',
+              'line-width': 1,
+            },
+          });
 
-      map.on("click", "country-fill", async (e) => {
-        if (e.features.length > 0) {
-          const properties = e.features[0].properties;
-          const country = properties.name || "Unknown country";
-          setSelectedCountry(country);
-          setIsLoading(true);
+          let hoveredCountryId = null;
 
-          try {
-            const response = await fetch(
-              `/api/folktales?region=${encodeURIComponent(country)}`
-            );
-            const data = await response.json();
-            
-            if (data.folktales && data.folktales.length > 0) {
-              setFolktales(data.folktales);
-              setShowModal(true);
-            } else {
-              alert(`No folktales found for ${country}`);
+          map.on('click', 'country-fill', async (e) => {
+            if (e.features.length === 0) {
+              toast.warn('No country selected. Please click on a valid country.');
+              return;
             }
-          } catch (err) {
-            console.error("Error fetching folktales:", err);
-            alert("Failed to load folktales. Please try again.");
-          } finally {
-            setIsLoading(false);
-          }
+
+            const properties = e.features[0].properties;
+            const country = properties.name || 'Unknown country';
+            setSelectedCountry(country);
+            setIsLoading(true);
+
+            try {
+              const response = await fetch(
+                `/api/folktales?region=${encodeURIComponent(country)}`
+              );
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              const data = await response.json();
+
+              if (data.data?.folktales?.length > 0) {
+                setFolktales(data.data.folktales);
+                setShowModal(true);
+                toast.success(`Found ${data.data.folktales.length} folktale(s) for ${country}`);
+              } else {
+                toast.info(`No folktales found for ${country}`);
+                setFolktales([]);
+                setShowModal(false);
+              }
+            } catch (error) {
+              console.error('Error fetching folktales:', error);
+              const errorMessage = handleError(error);
+              toast.error(errorMessage);
+            } finally {
+              setIsLoading(false);
+            }
+          });
+
+          map.on('mouseenter', 'country-fill', (e) => {
+            if (e.features.length > 0) {
+              if (hoveredCountryId !== null) {
+                map.setFeatureState(
+                  { source: 'countries', id: hoveredCountryId },
+                  { hover: false }
+                );
+              }
+              hoveredCountryId = e.features[0].id;
+              map.setFeatureState(
+                { source: 'countries', id: hoveredCountryId },
+                { hover: true }
+              );
+              map.getCanvas().style.cursor = 'pointer';
+            }
+          });
+
+          map.on('mouseleave', 'country-fill', () => {
+            if (hoveredCountryId !== null) {
+              map.setFeatureState(
+                { source: 'countries', id: hoveredCountryId },
+                { hover: false }
+              );
+            }
+            hoveredCountryId = null;
+            map.getCanvas().style.cursor = '';
+          });
+
+          map.on('error', (e) => {
+            console.error('Map error:', e.error);
+            toast.error('Failed to load map data. Please try again later.');
+          });
+        } catch (error) {
+          console.error('Error setting up map layers:', error);
+          toast.error('Failed to initialize map. Please refresh the page.');
         }
       });
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      toast.error('Failed to load map. Please check your connection and try again.');
+    }
 
-      map.on("mouseenter", "country-fill", (e) => {
-        if (e.features.length > 0) {
-          if (hoveredCountryId !== null) {
-            map.setFeatureState(
-              { source: 'countries', id: hoveredCountryId },
-              { hover: false }
-            );
-          }
-          hoveredCountryId = e.features[0].id;
-          map.setFeatureState(
-            { source: 'countries', id: hoveredCountryId },
-            { hover: true }
-          );
-          map.getCanvas().style.cursor = "pointer";
+    return () => {
+      if (map) {
+        try {
+          map.remove();
+        } catch (error) {
+          console.error('Error cleaning up map:', error);
         }
-      });
-
-      map.on("mouseleave", "country-fill", () => {
-        if (hoveredCountryId !== null) {
-          map.setFeatureState(
-            { source: 'countries', id: hoveredCountryId },
-            { hover: false }
-          );
-        }
-        hoveredCountryId = null;
-        map.getCanvas().style.cursor = "";
-      });
-    });
-
-    return () => map.remove();
+      }
+    };
   }, []);
 
+  const handleError = (error) => {
+    const errorData = error.response?.data;
+    const errorCode = errorData?.error;
+    const message = errorData?.message || error.message || 'An unexpected error occurred';
+
+    switch (errorCode) {
+      case 'validation_error':
+        return errorData.details?.map(err => err.msg).join(', ') || 'Invalid filter parameters';
+      case 'server_error':
+        return 'Failed to load folktales due to a server issue. Please try again later.';
+      default:
+        return message;
+    }
+  };
+
   const handleFolktaleClick = (id) => {
+    if (!id) {
+      toast.warn('Invalid folktale ID');
+      return;
+    }
     setShowModal(false);
     navigate(`/folktale/${id}`);
   };
 
   return (
-    <div style={{ padding: "0 16px", maxWidth: "1400px", margin: "0 auto" }}>
-      <Title>🌍 Click a Country to Explore Its Folktales</Title>
-      <MapContainer ref={mapRef} />
-
+    <div className="px-4 max-w-7xl mx-auto">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
+      <h2 className="text-center py-5 text-2xl font-semibold text-gray-800 bg-gradient-to-r from-gray-50 to-white shadow-sm max-md:text-xl max-md:py-4">
+        🌍 Click a Country to Explore Its Folktales
+      </h2>
+      <div
+        ref={mapRef}
+        className="w-full h-[calc(100vh-120px)] rounded-xl shadow-lg overflow-hidden mt-4 max-md:h-[calc(100vh-100px)]"
+      />
       {showModal && (
-        <ModalBackdrop onClick={() => setShowModal(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Folktales from {selectedCountry}</ModalTitle>
-            
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-11/12 max-w-md max-h-[80vh] overflow-y-auto shadow-2xl animate-slide-up max-sm:p-4 max-sm:w-[95%]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold text-gray-800 text-center mb-5 pb-3 border-b border-gray-200">
+              Folktales from {selectedCountry || 'Unknown'}
+            </h3>
             {isLoading ? (
-              <LoadingIndicator>Loading folktales...</LoadingIndicator>
+              <div className="text-center py-5 text-gray-600">Loading folktales...</div>
             ) : (
-              <FolktaleList>
-                {folktales.map((folktale) => (
-                  <FolktaleItem
-                    key={folktale._id}
-                    onClick={() => handleFolktaleClick(folktale._id)}
-                  >
-                    {folktale.title}
-                  </FolktaleItem>
-                ))}
-              </FolktaleList>
+              <ul className="list-none p-0 m-0">
+                {folktales.length > 0 ? (
+                  folktales.map((folktale) => (
+                    <li
+                      key={folktale._id || Math.random()}
+                      onClick={() => handleFolktaleClick(folktale._id)}
+                      className="p-3 border-b border-gray-100 text-blue-600 font-medium cursor-pointer rounded-md my-1 hover:bg-blue-50 hover:text-blue-800 hover:translate-x-1 transition-all duration-200 last:border-b-0"
+                    >
+                      {folktale.title || 'Untitled Folktale'}
+                    </li>
+                  ))
+                ) : (
+                  <li className="p-3 text-center text-gray-500">No folktales available</li>
+                )}
+              </ul>
             )}
-            
-            <CloseButton onClick={() => setShowModal(false)}>
+            <button
+              onClick={() => setShowModal(false)}
+              className="block mx-auto mt-5 px-6 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 hover:-translate-y-px transition-all duration-200 active:translate-y-0"
+            >
               Close
-            </CloseButton>
-          </ModalContent>
-        </ModalBackdrop>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
-};
+}
 
 export default CountryMap;
