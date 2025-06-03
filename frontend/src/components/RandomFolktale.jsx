@@ -12,7 +12,7 @@ function RandomFolktale() {
   const fetchRandomFolktale = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/folktales/random"
+        "/api/folktales/random"
       );
       return response.data;
     } catch (err) {
