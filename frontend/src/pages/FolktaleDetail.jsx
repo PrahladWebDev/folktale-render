@@ -23,7 +23,7 @@ function FolktaleDetail() {
       setError(null);
 
       try {
-        const folktaleResponse = await axios.get(`http://localhost:5000/api/folktales/${id}`);
+        const folktaleResponse = await axios.get(`/api/folktales/${id}`);
         if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
           throw new Error('Invalid folktale data received');
         }
@@ -31,7 +31,7 @@ function FolktaleDetail() {
 
         if (token) {
           try {
-            const bookmarkResponse = await axios.get('http://localhost:5000/api/folktales/bookmark', {
+            const bookmarkResponse = await axios.get('/api/folktales/bookmark', {
               headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -106,14 +106,14 @@ function FolktaleDetail() {
 
     try {
       if (isBookmarked) {
-        await axios.delete(`http://localhost:5000/api/folktales/bookmarks/${id}`, {
+        await axios.delete(`/api/folktales/bookmarks/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsBookmarked(false);
         toast.success('Bookmark removed.');
       } else {
         await axios.post(
-          'http://localhost:5000/api/folktales/bookmarks',
+          '/api/folktales/bookmarks',
           { folktaleId: id },
           { headers: { Authorization: `Bearer ${token}` } }
         );
