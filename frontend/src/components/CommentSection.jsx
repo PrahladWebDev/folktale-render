@@ -36,7 +36,7 @@ function CommentSection({ folktaleId }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/folktales/${folktaleId}/comments`,
+        `/api/folktales/${folktaleId}/comments`,
         { content },
         { headers: { Authorization: `Bearer ${token}` } }
       );
