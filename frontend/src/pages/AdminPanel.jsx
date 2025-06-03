@@ -27,7 +27,7 @@ function AdminPanel() {
   useEffect(() => {
     const fetchFolktales = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/admin/folktales', {
+        const response = await axios.get('/api/admin/folktales', {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000,
         });
@@ -105,7 +105,7 @@ function AdminPanel() {
       };
 
       if (editId) {
-        await axios.put(`http://localhost:5000/api/folktales/${editId}`, formData, config);
+        await axios.put(`/api/folktales/${editId}`, formData, config);
         setSuccess('Folktale updated successfully!');
         setEditId(null);
       } else {
@@ -114,7 +114,7 @@ function AdminPanel() {
           setLoading(false);
           return;
         }
-        await axios.post('http://localhost:5000/api/folktales', formData, config);
+        await axios.post('/api/folktales', formData, config);
         setSuccess('Folktale created successfully!');
       }
 
@@ -124,7 +124,7 @@ function AdminPanel() {
       setUploadProgress(0);
       setLoading(false);
 
-      const response = await axios.get('http://localhost:5000/api/admin/folktales', {
+      const response = await axios.get('/api/admin/folktales', {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
