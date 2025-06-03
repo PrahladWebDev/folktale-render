@@ -1,10 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 function AdminPanel() {
   const navigate = useNavigate();
@@ -19,61 +18,27 @@ function AdminPanel() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [editId, setEditId] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    if (!token) {
-      toast.error('Authentication required. Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
-      return;
-    }
-
     const fetchFolktales = async () => {
       try {
-        const response = await axios.get('/api/admin/folktales', {
+        const response = await axios.get('http://localhost:5000/api/admin/folktales', {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000,
         });
-        setFolktales(response.data.data || []);
+        setFolktales(response.data);
       } catch (error) {
         console.error('Error fetching folktales:', error);
-        handleError(error, 'Failed to fetch folktales.');
-        setTimeout(() => navigate('/login'), 2000);
+        navigate('/login');
       }
     };
     fetchFolktales();
   }, [token, navigate]);
-
-  const handleError = (error, defaultMessage) => {
-    const errorData = error.response?.data;
-    const errorCode = errorData?.error;
-    let message = errorData?.message || defaultMessage;
-
-    switch (errorCode) {
-      case 'auth_required':
-      case 'invalid_token':
-      case 'token_expired':
-        message = 'Session expired. Redirecting to login...';
-        localStorage.removeItem('token');
-        break;
-      case 'validation_error':
-        message = errorData.details?.map(err => err.msg).join(', ') || 'Invalid input data.';
-        break;
-      case 'not_found':
-        message = 'Folktale not found.';
-        break;
-      case 'server_error':
-        message = 'Server error. Please try again later.';
-        break;
-      case 'ECONNABORTED':
-        message = 'Request timed out. Please check your connection.';
-        break;
-    }
-    toast.error(message);
-    return message;
-  };
 
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -85,40 +50,35 @@ function AdminPanel() {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file) {
+    if (file) {
+      const filetypes = /jpeg|jpg|png/;
+      const maxSizeMB = 5;
+      if (!filetypes.test(file.type)) {
+        setError('Please upload a JPEG or PNG image.');
+        setImageFile(null);
+        setImagePreview('');
+        return;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        setError(`Image size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+        setImageFile(null);
+        setImagePreview('');
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError('');
+    } else {
       setImageFile(null);
       setImagePreview('');
-      return;
     }
-
-    const filetypes = /jpeg|jpg|png/;
-    const maxSizeMB = 5;
-    if (!filetypes.test(file.type)) {
-      toast.error('Please upload a JPEG or PNG image.');
-      setImageFile(null);
-      setImagePreview('');
-      return;
-    }
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`Image size exceeds ${maxSizeMB}MB limit.`);
-      setImageFile(null);
-      setImagePreview('');
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isUploading) return;
-
-    if (!editId && !imageFile) {
-      toast.error('An image is required for new folktales.');
-      return;
-    }
-
-    setIsUploading(true);
+    setError('');
+    setSuccess('');
+    setLoading(true);
     setUploadProgress(0);
 
     try {
@@ -145,69 +105,79 @@ function AdminPanel() {
       };
 
       if (editId) {
-        await axios.put(`/api/folktales/${editId}`, formData, config);
-        toast.success('Folktale updated successfully!');
+        await axios.put(`http://localhost:5000/api/folktales/${editId}`, formData, config);
+        setSuccess('Folktale updated successfully!');
+        setEditId(null);
       } else {
-        await axios.post('/api/folktales', formData, config);
-        toast.success('Folktale created successfully!');
+        if (!imageFile) {
+          setError('An image is required for new folktales.');
+          setLoading(false);
+          return;
+        }
+        await axios.post('http://localhost:5000/api/folktales', formData, config);
+        setSuccess('Folktale created successfully!');
       }
 
-      // Reset form
       setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
       setImageFile(null);
       setImagePreview('');
-      setEditId(null);
+      setUploadProgress(0);
+      setLoading(false);
 
-      // Refresh folktales
-      const response = await axios.get('/api/admin/folktales', {
+      const response = await axios.get('http://localhost:5000/api/admin/folktales', {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
-      setFolktales(response.data.data || []);
+      setFolktales(response.data);
+
+      setTimeout(() => setSuccess(''), 4000);
     } catch (error) {
       console.error('Error saving folktale:', error);
-      handleError(error, 'Failed to save folktale.');
-    } finally {
-      setIsUploading(false);
+      let errorMessage = 'Failed to save folktale.';
+      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Try uploading a smaller image or check server status.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      setError(errorMessage);
+      setLoading(false);
       setUploadProgress(0);
     }
   };
 
   const handleEdit = (folktale) => {
-    if (!folktale?._id) {
-      toast.error('Invalid folktale selected.');
-      return;
-    }
     setForm({
-      title: folktale.title || '',
-      content: folktale.content || '',
-      region: folktale.region || '',
-      genre: folktale.genre || '',
-      ageGroup: folktale.ageGroup || '',
+      title: folktale.title,
+      content: folktale.content,
+      region: folktale.region,
+      genre: folktale.genre,
+      ageGroup: folktale.ageGroup,
     });
     setImageFile(null);
-    setImagePreview(folktale.imageUrl || '');
+    setImagePreview(folktale.imageUrl);
     setEditId(folktale._id);
+    setError('');
+    setSuccess('');
+    setUploadProgress(0);
+    setLoading(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (!id) {
-      toast.error('Invalid folktale ID.');
-      return;
-    }
-    if (!window.confirm('Are you sure you want to delete this folktale?')) return;
-
-    try {
-      await axios.delete(`/api/admin/folktales/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000,
-      });
-      setFolktales(folktales.filter((f) => f._id !== id));
-      toast.success('Folktale deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting folktale:', error);
-      handleError(error, 'Failed to delete folktale.');
+    if (window.confirm('Are you sure you want to delete this folktale?')) {
+      try {
+        setLoading(true);
+        await axios.delete(`http://localhost:5000/api/admin/folktales/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000,
+        });
+        setFolktales(folktales.filter((f) => f._id !== id));
+        setLoading(false);
+      } catch (error) {
+        console.error('Error deleting folktale:', error);
+        setError('Failed to delete folktale.');
+        setLoading(false);
+      }
     }
   };
 
@@ -223,26 +193,38 @@ function AdminPanel() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-5">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-serif text-amber-900 mb-2">Admin Panel</h2>
-        <h3 className="text-xl text-amber-800 font-medium">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fadeIn">
+      {loading && (
+        <div className="fixed inset-0 bg-amber-900/85 flex flex-col items-center justify-center z-[9999]">
+          <div className="border-8 border-gray-200 border-t-amber-100 rounded-full w-16 h-16 animate-spin"></div>
+          <div className="mt-4 text-white text-xl">Saving folktale...</div>
+        </div>
+      )}
+
+      <div className="text-center mb-6">
+        <h2 className="text-3xl sm:text-4xl font-bold text-amber-900 mb-2 animate-pulseSketchy">
+          Admin Panel
+        </h2>
+        <h3 className="text-xl sm:text-2xl text-amber-800 font-semibold">
           {editId ? 'Edit Folktale' : 'Create New Folktale'}
         </h3>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-amber-50 p-6 rounded-lg mb-10 shadow-sm">
+      {error && (
+        <div className="bg-red-100 text-red-800 p-3 rounded-md border-2 border-red-300 mb-5 text-center font-semibold animate-shake">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-100 text-green-800 p-3 rounded-md border-2 border-green-300 mb-5 text-center font-semibold animate-shake">
+          {success}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl p-6 shadow-lg border-2 border-amber-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-          <div>
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Title</label>
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Title</label>
             <input
               type="text"
               name="title"
@@ -250,51 +232,72 @@ function AdminPanel() {
               value={form.title}
               onChange={handleInputChange}
               required
-              className="w-full p-2.5 border border-amber-200 rounded-md text-base font-serif text-gray-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              disabled={loading}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             />
           </div>
-          <div>
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Region</label>
+
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Region</label>
             <select
               name="region"
               value={form.region}
               onChange={handleInputChange}
               required
-              className="w-full p-2.5 border border-amber-200 rounded-md text-base font-serif bg-white cursor-pointer focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              disabled={loading}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Region</option>
-              {/* Truncated for brevity; same options as original */}
-              <option value="Afghanistan">Afghanistan</option>
-              <option value="Albania">Albania</option>
-              <option value="Algeria">Algeria</option>
-              {/* ... Add remaining countries as needed */}
+              <option value="Nepal">Nepal</option>
+              <option value="Netherlands">Netherlands</option>
+              <option value="New Zealand">New Zealand</option>
+              <option value="Nicaragua">Nicaragua</option>
+              <option value="Niger">Niger</option>
+              {/* Add full region list from FilterBar.jsx here */}
             </select>
           </div>
-          <div>
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Genre</label>
+
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Genre</label>
             <select
               name="genre"
               value={form.genre}
               onChange={handleInputChange}
               required
-              className="w-full p-2.5 border border-amber-200 rounded-md text-base font-serif bg-white cursor-pointer focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              disabled={loading}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Genre</option>
               <option value="Fable">Fable</option>
               <option value="Myth">Myth</option>
               <option value="Legend">Legend</option>
               <option value="Fairy Tale">Fairy Tale</option>
-              {/* ... Add remaining genres as needed */}
+              <option value="Horror">Horror</option>
+              <option value="Fantasy">Fantasy</option>
+              <option value="Adventure">Adventure</option>
+              <option value="Mystery">Mystery</option>
+              <option value="Historical">Historical</option>
+              <option value="Ghost Story">Ghost Story</option>
+              <option value="Supernatural">Supernatural</option>
+              <option value="Tragedy">Tragedy</option>
+              <option value="Moral Tale">Moral Tale</option>
+              <option value="Urban Legend">Urban Legend</option>
+              <option value="Comedy">Comedy</option>
+              <option value="Parable">Parable</option>
+              <option value="Epic">Epic</option>
+              <option value="Romance">Romance</option>
             </select>
           </div>
-          <div>
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Age Group</label>
+
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Age Group</label>
             <select
               name="ageGroup"
               value={form.ageGroup}
               onChange={handleInputChange}
               required
-              className="w-full p-2.5 border border-amber-200 rounded-md text-base font-serif bg-white cursor-pointer focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              disabled={loading}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Age Group</option>
               <option value="Kids">Kids</option>
@@ -302,51 +305,59 @@ function AdminPanel() {
               <option value="Adults">Adults</option>
             </select>
           </div>
-          <div>
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Image (Max 5MB)</label>
+
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Image (Max 5MB)</label>
             <input
               type="file"
               name="image"
               accept="image/jpeg,image/png"
               onChange={handleImageChange}
               required={!editId}
-              className="w-full p-2.5 border border-amber-200 rounded-md text-base font-serif bg-white cursor-pointer"
+              disabled={loading}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-amber-100 file:text-amber-900 file:font-semibold"
             />
             {imagePreview && (
-              <div className="mt-2 w-full max-h-44 rounded overflow-hidden">
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            )}
-            {isUploading && (
               <div className="mt-2">
-                <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-900 transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-                <span className="block mt-1 text-sm text-amber-900 text-center">{uploadProgress}%</span>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-w-full max-h-48 rounded-lg"
+                />
               </div>
             )}
           </div>
-          <div className="md:col-span-2">
-            <label className="block mb-2 font-semibold text-amber-900 text-sm">Content</label>
+
+          <div className="col-span-1 md:col-span-2">
+            <label className="mb-1 font-bold text-amber-900">Content</label>
             <ReactQuill
+              theme="snow"
               value={form.content}
               onChange={handleContentChange}
               modules={quillModules}
-              placeholder="Enter folktale content"
-              className="bg-white border border-amber-200 rounded-md font-serif min-h-[200px]"
+              className="bg-white rounded-md border-2 border-amber-200"
+              readOnly={loading}
             />
           </div>
         </div>
-        <div className="flex justify-center gap-4">
+
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <div className="relative h-6 bg-amber-100 rounded-full overflow-hidden mb-6">
+            <div
+              className="h-full bg-amber-900 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+            <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold">
+              {uploadProgress}%
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 justify-start">
           <button
             type="submit"
-            disabled={isUploading}
-            className={`px-6 py-3 bg-amber-900 text-white rounded-md font-semibold hover:bg-amber-800 transition-all duration-300 ${
-              isUploading ? 'opacity-60 cursor-not-allowed' : ''
-            }`}
+            disabled={loading}
+            className="bg-amber-900 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {editId ? 'Update Folktale' : 'Create Folktale'}
           </button>
@@ -358,10 +369,13 @@ function AdminPanel() {
                 setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
                 setImageFile(null);
                 setImagePreview('');
-                setIsUploading(false);
+                setError('');
+                setSuccess('');
                 setUploadProgress(0);
+                setLoading(false);
               }}
-              className="px-6 py-3 bg-transparent text-amber-900 border border-amber-900 rounded-md font-semibold hover:bg-amber-100 transition-all duration-300"
+              disabled={loading}
+              className="bg-orange-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-orange-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -369,67 +383,57 @@ function AdminPanel() {
         </div>
       </form>
 
-      <div className="mt-10">
-        <h3 className="text-2xl font-serif text-amber-900 mb-5 pb-2 border-b-2 border-amber-200">
-          All Folktales ({folktales.length})
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {folktales.map((folktale) => (
-            <div
-              key={folktale._id || Math.random()}
-              className="bg-white rounded-lg p-5 shadow-sm border border-amber-100 hover:shadow-md transition-transform duration-300"
-            >
-              <div className="mb-4">
-                <h4 className="text-lg font-serif text-amber-900 mb-2">{folktale.title || 'Untitled'}</h4>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="bg-amber-50 text-amber-900 px-2 py-1 rounded-full text-xs">
-                    {folktale.region || 'Unknown'}
-                  </span>
-                  <span className="bg-amber-50 text-amber-900 px-2 py-1 rounded-full text-xs">
-                    {folktale.genre || 'Unknown'}
-                  </span>
-                  <span className="bg-amber-50 text-amber-900 px-2 py-1 rounded-full text-xs">
-                    {folktale.ageGroup || 'Unknown'}
-                  </span>
-                </div>
-              </div>
-              <div className="w-full max-h-48 rounded overflow-hidden mb-4">
-                <img
-                  src={folktale.imageUrl || '/placeholder.jpg'}
-                  alt={folktale.title || 'Folktale'}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/placeholder.jpg';
-                    toast.warn('Failed to load folktale image.');
-                  }}
-                />
-              </div>
-              <div className="flex justify-between mb-4 text-sm">
-                <span className="text-amber-600 font-semibold">
-                  Rating: {folktale.averageRating || 'N/A'} ⭐
-                </span>
-                <span className="text-gray-600">
-                  {folktale.comments?.length || 0} comment{folktale.comments?.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(folktale)}
-                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-all duration-300"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(folktale._id)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-all duration-300"
-                >
-                  Delete
-                </button>
-              </div>
+      <hr className="my-8 border-amber-300" />
+
+      <h3 className="text-2xl font-bold text-amber-900 mb-4 animate-pulseSketchy">
+        Existing Folktales
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {folktales.length === 0 && (
+          <p className="text-gray-600 italic text-center col-span-full animate-shake">
+            No folktales found.
+          </p>
+        )}
+        {folktales.map((f) => (
+          <div
+            key={f._id}
+            className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg p-4 shadow-md border-2 border-amber-200 animate-fadeIn"
+          >
+            <h4 className="text-lg font-bold text-amber-900">{f.title}</h4>
+            <p className="text-sm">
+              <span className="font-bold text-amber-900">Region:</span> {f.region}
+            </p>
+            <p className="text-sm">
+              <span className="font-bold text-amber-900">Genre:</span> {f.genre}
+            </p>
+            <p className="text-sm">
+              <span className="font-bold text-amber-900">Age Group:</span> {f.ageGroup}
+            </p>
+            {f.imageUrl && (
+              <img
+                src={f.imageUrl}
+                alt={f.title}
+                className="w-36 h-24 object-cover rounded-md mt-2"
+              />
+            )}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => handleEdit(f)}
+                disabled={loading}
+                className="flex-1 bg-green-600 text-white py-2 rounded-md font-bold hover:bg-green-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDelete(f._id)}
+                disabled={loading}
+                className="flex-1 bg-red-600 text-white py-2 rounded-md font-bold hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Delete
+              </button>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
