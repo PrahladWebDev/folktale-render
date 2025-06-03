@@ -11,15 +11,18 @@ import fs from 'fs/promises'; // Use promises version for async/await
 
 const router = express.Router();
 
-// Set up Multer for file uploads
+// Set up Multer for file uploads with storage configuration
+// Use '/tmp' as the destination directory because it is writable in the Render environment
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, '/tmp'); // Writable directory on Render
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    // Use timestamp + original file extension for unique filenames
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
   },
 });
+
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
