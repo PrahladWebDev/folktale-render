@@ -1,41 +1,14 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 function SearchBar() {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
   const handleSearch = () => {
-    try {
-      const trimmedSearch = search.trim();
-      if (!trimmedSearch) {
-        toast.warn('Please enter a search term.');
-        return;
-      }
-
-      // Validate search query length
-      if (trimmedSearch.length > 100) {
-        toast.error('Search term is too long. Please use up to 100 characters.');
-        return;
-      }
-
-      const query = new URLSearchParams();
-      query.set('search', trimmedSearch);
-
-      // Validate query string length
-      const queryString = query.toString();
-      if (queryString.length > 2000) {
-        toast.error('Query parameters are too long.');
-        return;
-      }
-
-      navigate(`/?${queryString}`);
-      toast.success('Search initiated!');
-    } catch (error) {
-      console.error('Error during search:', error);
-      toast.error('Failed to perform search. Please try again.');
+    if (search.trim()) {
+      navigate(`/?search=${search.trim()}`);
     }
   };
 
@@ -46,31 +19,19 @@ function SearchBar() {
   };
 
   return (
-    <div className="flex max-w-md w-full mx-auto">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
+    <div className="flex max-w-md w-full mx-auto font-caveat animate-fadeIn">
       <input
         type="text"
         placeholder="Search folktales..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyPress={handleKeyPress}
-        className="flex-1 p-3 text-base border border-amber-200 border-r-0 rounded-l-full font-serif text-gray-800 outline-none transition-all duration-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 placeholder:italic placeholder:text-gray-400"
+        className="flex-1 p-3 text-lg border-2 border-r-0 border-gray-600 rounded-l-full bg-white text-gray-800 placeholder-gray-400 placeholder:font-semibold placeholder:text-gray-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-2 transition-all duration-300"
       />
       <button
         onClick={handleSearch}
         disabled={!search.trim()}
-        className={`px-5 rounded-r-full font-semibold text-base flex items-center gap-2 transition-all duration-300 ${
-          search.trim()
-            ? 'bg-amber-800 text-white hover:bg-amber-700'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-        }`}
+        className="flex items-center gap-2 bg-blue-500 px-5 py-2.5 text-lg font-semibold text-white rounded-r-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-2 transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +51,7 @@ function SearchBar() {
         Search
       </button>
     </div>
-  );
+);
 }
 
 export default SearchBar;
