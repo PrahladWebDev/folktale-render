@@ -1,90 +1,111 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Link } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { Link } from "react-router-dom";
 
 function RandomFolktale() {
   const [folktale, setFolktale] = useState(null);
+  const [nextFolktale, setNextFolktale] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const intervalTime = 2000; // 2 seconds
 
   const fetchRandomFolktale = async () => {
     try {
-      const response = await axios.get('/api/folktales/random');
-      const data = response.data.data;
-      if (!data || !data?._id) {
-        throw new Error('Invalid folktale data received');
-      }
-      setFolktale(data);
-      toast.success('New random folktale loaded!');
-    } catch (error) {
-      console.error('Failed to fetch folktale:', error);
-      const errorMessage = handleError(error);
-      toast.error(errorMessage);
-      setFolktale(null); // Clear folktale on error to show loading state
-    }
-  };
-
-  const handleError = (error) => {
-    const errorData = error.response?.data;
-    const errorCode = errorData?.error;
-    const message = errorData?.message || error.message || 'An unexpected error occurred';
-
-    switch (errorCode) {
-      case 'not_found':
-        return 'No folktales available at the moment.';
-      case 'server_error':
-        return 'Failed to load a random folktale due to a server error.';
-      default:
-        return errorMessage;
+      const response = await axios.get(
+        "http://localhost:5000/api/folktales/random"
+      );
+      return response.data;
+    } catch (err) {
+      console.error("Failed to fetch folktale:", err);
+      throw err;
     }
   };
 
   useEffect(() => {
-    fetchRandomFolktale(); // Initial fetch
-    const interval = setInterval(fetchRandomFolktale, intervalTime);
+    // Initial fetch
+    const initFetch = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchRandomFolktale();
+        setFolktale(data);
+        setIsLoading(false);
+      } catch (err) {
+        console.log(err);
+
+        setError("Unable to load a folktale. Please try again later.");
+        setIsLoading(false);
+      }
+    };
+
+    // Periodic fetch for next folktale
+    const fetchNext = async () => {
+      try {
+        const data = await fetchRandomFolktale();
+        setNextFolktale(data);
+      } catch (err) {
+        console.log(err);
+
+        setError("Unable to load a folktale. Please try again later.");
+      }
+    };
+
+    initFetch();
+    const interval = setInterval(async () => {
+      await fetchNext();
+    }, intervalTime);
+
     return () => clearInterval(interval);
-  }, []); // Empty dependency array for stable interval
+  }, []);
+
+  useEffect(() => {
+    if (nextFolktale) {
+      // Trigger fade-out and update folktale after a delay to allow transition
+      const timer = setTimeout(() => {
+        setFolktale(nextFolktale);
+        setNextFolktale(null);
+        setError(null);
+      }, 300); // Matches CSS transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [nextFolktale]);
 
   return (
-    <div className="mx-auto max-w-md bg-white rounded-xl p-6 my-8 shadow-sm border border-amber-100 text-center">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
-      {!folktale ? (
-        <p className="text-gray-600">Loading folktale...</p>
+    <div className="mx-auto max-w-xl bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 m-8 shadow-lg border-2 border-amber-300 font-caveat text-gray-800 transition-opacity duration-300 ease-in-out">
+      {isLoading || error || !folktale ? (
+        <div className="min-h-[450px] flex items-center justify-center text-gray-600 italic rounded-xl border-2 border-amber-300 bg-amber-50 p-6 shadow-md animate-shake">
+          {isLoading && <p className="text-xl">Loading folktale...</p>}
+          {error && (
+            <p className="text-red-600 text-xl font-semibold">{error}</p>
+          )}
+          {!isLoading && !error && !folktale && (
+            <p className="text-xl">No folktale to display.</p>
+          )}
+        </div>
       ) : (
-        <>
-            <h3 className="text-xl font-serif text-gray-900 mb-4"> {folktale.title || 'Untitled Folktale'}</h3>
-            <div className="flex-col items-center>
-              <Link to={`/folktale/${folktale._id}`} className="block w-full">
-                <div className="w-full max-h-[400px] overflow-hidden rounded-lg mb-4 shadow-md flex justify-center items-center bg-gray-100">
-                  <img
-                    src={folktale.imageUrl || '/placeholder.jpg'}
-                    alt={folktale.title || 'Folktale'}
-                    className="w-full h-full object-contain max-h-[400px] transition-transform duration-300 hover:scale-105"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/placeholder.jpg';
-                      toast.warn('Failed to load folktale image. Using placeholder.');
-                    }}
-                  />
-                </div>
-              </Link>
-              {/* Optional refresh button */}
-              {/* <button
-                onClick={fetchRandomFolktale}
-                className="mt-4 px-6 py-2 bg-amber-800 text-amber-50 rounded-md font-semibold flex items-center gap-2 mx-auto hover:bg-amber-700 transition-all duration-300"
-              >
-                <span className="text-lg">⟳</span> Discover Another Tale
-              </button> */}
-            </div>
-          </>
+        <div className="animate-fadeIn">
+          <h3 className="text-2xl sm:text-3xl font-bold text-center text-amber-900 mb-4">
+            {folktale.title}
+          </h3>
+          <div className="flex flex-col items-center">
+            <Link
+              to={`/folktale/${folktale._id}`}
+              className="no-underline text-inherit w-full"
+            >
+              <div className="w-full max-h-[400px] rounded-lg overflow-hidden shadow-md bg-gray-100 flex justify-center items-center transform hover:scale-105 transition-transform duration-300">
+                <img
+                  src={folktale.imageUrl}
+                  alt={folktale.title}
+                  className="w-full h-auto max-h-[400px] object-contain transition-transform duration-300"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://via.placeholder.com/600x400?text=Folktale+Image";
+                  }}
+                />
+              </div>
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );
