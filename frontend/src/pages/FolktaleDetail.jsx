@@ -78,7 +78,7 @@ function FolktaleDetail() {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/folktales/${id}/rate`,
+        `/api/folktales/${id}/rate`,
         { rating },
         { headers: { Authorization: `Bearer ${token}` } }
       );
