@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CommentSection from '../components/CommentSection';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'; // Importing bookmark icons from react-icons
+import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 
 function FolktaleDetail() {
   const { id } = useParams();
@@ -13,40 +14,60 @@ function FolktaleDetail() {
   const [rating, setRating] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isBookmarked, setIsBookmarked] = useState(false); // State for bookmark status
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const token = localStorage.getItem('token');
 
- useEffect(() => {
-  const fetchFolktaleAndBookmarks = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Fetch folktale details
-      const folktaleResponse = await axios.get(`/api/folktales/${id}`);
-      setFolktale(folktaleResponse.data);
+  useEffect(() => {
+    const fetchFolktaleAndBookmarks = async () => {
+      setIsLoading(true);
+      setError(null);
 
-      // Fetch user's bookmarks if authenticated
-      if (token) {
-        const bookmarkResponse = await axios.get('/api/folktales/bookmark', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!Array.isArray(bookmarkResponse.data)) {
-          throw new Error('Bookmark data is not an array');
+      try {
+        const folktaleResponse = await axios.get(`http://localhost:5000/api/folktales/${id}`);
+        if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
+          throw new Error('Invalid folktale data received');
         }
-        const isBookmarked = bookmarkResponse.data.some(
-          (bookmark) => bookmark.folktaleId && bookmark.folktaleId._id === id
-        );
-        setIsBookmarked(isBookmarked);
+        setFolktale(folktaleResponse.data);
+
+        if (token) {
+          try {
+            const bookmarkResponse = await axios.get('http://localhost:5000/api/folktales/bookmark', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!Array.isArray(bookmarkResponse.data)) {
+              throw new Error('Unexpected bookmark response format');
+            }
+
+            const isBookmarked = bookmarkResponse.data.some(
+              (bookmark) => bookmark.folktaleId && bookmark.folktaleId._id === id
+            );
+            setIsBookmarked(isBookmarked);
+          } catch (bookmarkError) {
+            if (bookmarkError.response?.status === 401) {
+              toast.warning('Session expired. Please log in again.');
+              localStorage.removeItem('token');
+              navigate('/login');
+            } else {
+              console.error('Bookmark fetch error:', bookmarkError);
+              toast.error('Failed to fetch bookmark status.');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching folktale:', err);
+        if (err.response?.status === 404) {
+          setError('Folktale not found.');
+        } else {
+          setError('Failed to load folktale. Please try again later.');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching folktale or bookmarks:', error);
-      setError('Failed to load folktale or bookmarks. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  fetchFolktaleAndBookmarks();
-}, [id, token]);
+    };
+
+    fetchFolktaleAndBookmarks();
+  }, [id, token, navigate]);
 
   const handleRate = async () => {
     if (!token) {
@@ -54,9 +75,10 @@ function FolktaleDetail() {
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
+
     try {
       const response = await axios.post(
-        `/api/folktales/${id}/rate`,
+        `http://localhost:5000/api/folktales/${id}/rate`,
         { rating },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -64,8 +86,14 @@ function FolktaleDetail() {
       toast.success('Rating submitted successfully!');
     } catch (error) {
       console.error('Error rating folktale:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to submit rating. Please try again.';
-      toast.error(errorMessage);
+      if (error.response?.status === 401) {
+        toast.warning('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to submit rating.';
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -75,84 +103,104 @@ function FolktaleDetail() {
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
+
     try {
       if (isBookmarked) {
-        // Remove bookmark
-        await axios.delete(`/api/folktales/bookmarks/${id}`, {
+        await axios.delete(`http://localhost:5000/api/folktales/bookmarks/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsBookmarked(false);
-        toast.success('Bookmark removed successfully!');
+        toast.success('Bookmark removed.');
       } else {
-        // Add bookmark
         await axios.post(
-          '/api/folktales/bookmarks',
+          'http://localhost:5000/api/folktales/bookmarks',
           { folktaleId: id },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsBookmarked(true);
-        toast.success('Folktale bookmarked successfully!');
+        toast.success('Folktale bookmarked!');
       }
     } catch (error) {
-      console.error('Error toggling bookmark:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update bookmark. Please try again.';
-      toast.error(errorMessage);
+      console.error('Bookmark error:', error);
+      if (error.response?.status === 401) {
+        toast.warning('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else {
+        toast.error('Failed to update bookmark.');
+      }
     }
   };
 
-  if (isLoading) return <div style={styles.loading}>Loading folktale...</div>;
-  if (error) return <div style={styles.error}>{error}</div>;
-  if (!folktale) return <div style={styles.error}>Folktale not found.</div>;
+  if (isLoading) {
+    return (
+      <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulseSketchy">
+        Loading folktale...
+      </div>
+    );
+  }
 
-  const averageRating = folktale.ratings.length
+  if (error) {
+    return (
+      <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">
+        {error}
+      </div>
+    );
+  }
+
+  if (!folktale) {
+    return (
+      <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">
+        No folktale data available.
+      </div>
+    );
+  }
+
+  const averageRating = folktale.ratings?.length
     ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1)
     : 'No ratings';
 
   return (
-    <div style={styles.container}>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
-      <div style={styles.searchContainer}></div>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fadeIn">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar closeOnClick pauseOnHover theme="light" />
 
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>{folktale.title}</h1>
-          <div style={styles.meta}>
-            <span style={styles.metaItem}><strong>Region:</strong> {folktale.region}</span>
-            <span style={styles.metaItem}><strong>Genre:</strong> {folktale.genre}</span>
-            <span style={styles.metaItem}><strong>Age Group:</strong> {folktale.ageGroup}</span>
-            <span style={styles.rating}>
-              <strong>Rating:</strong> {averageRating}
-              <span style={styles.star}>⭐</span>
+      <div className="bg-white rounded-lg p-6 sm:p-8 shadow-md border-2 border-amber-200">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold text-amber-900 mb-4 animate-pulseSketchy">
+            {folktale.title}
+          </h1>
+          <div className="flex flex-wrap justify-center gap-3 mb-5 items-center text-sm">
+            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
+              <strong className="text-amber-900">Region:</strong> {folktale.region}
+            </span>
+            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
+              <strong className="text-amber-900">Genre:</strong> {folktale.genre}
+            </span>
+            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
+              <strong className="text-amber-900">Age Group:</strong> {folktale.ageGroup}
+            </span>
+            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
+              <strong className="text-amber-900">Rating:</strong> {averageRating}
+              <span className="ml-1 text-amber-600">⭐</span>
               {folktale.ratings.length > 0 && (
-                <span style={styles.ratingCount}>({folktale.ratings.length} ratings)</span>
+                <span className="ml-1 text-xs text-gray-500">({folktale.ratings.length} ratings)</span>
               )}
             </span>
             <button
               onClick={handleBookmark}
-              style={styles.bookmarkButton}
+              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
               title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
             >
-              {isBookmarked ? (
-                <BsBookmarkFill style={styles.bookmarkIcon} />
-              ) : (
-                <BsBookmark style={styles.bookmarkIcon} />
-              )}
+              {isBookmarked ? <BsBookmarkFill className="text-2xl" /> : <BsBookmark className="text-2xl" />}
             </button>
           </div>
         </div>
 
-        <div style={styles.imageContainer}>
+        <div className="max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden shadow-lg border-2 border-amber-200">
           <img
             src={folktale.imageUrl}
             alt={folktale.title}
-            style={styles.image}
+            className="w-full h-auto object-cover"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = 'https://via.placeholder.com/800x400?text=No+Image';
@@ -161,29 +209,31 @@ function FolktaleDetail() {
         </div>
 
         {folktale.ageGroup === 'Adults' && (
-          <div style={styles.adultWarning}>
-            <p><strong>⚠️ Warning:</strong> This folktale contains content intended for adult readers. Viewer discretion is advised.</p>
+          <div className="bg-amber-100 text-amber-800 p-4 rounded-lg border-2 border-amber-200 mb-6 text-base animate-shake">
+            <p><strong className="text-amber-900">⚠️ Warning:</strong> This folktale contains content intended for adult readers.</p>
           </div>
         )}
 
-        <div style={styles.storyContainer}>
-          <h2 style={styles.storyTitle}>The Story</h2>
-          <div style={styles.storyContent}>
+        <div className="my-10">
+          <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
+            The Story
+          </h2>
+          <div className="text-lg leading-relaxed">
             {token ? (
               <div
-                style={styles.paragraph}
+                className="mb-5 prose prose-lg max-w-none"
                 dangerouslySetInnerHTML={{ __html: folktale.content }}
               />
             ) : (
               <>
                 <div
-                  style={styles.paragraph}
+                  className="mb-5 prose prose-lg max-w-none"
                   dangerouslySetInnerHTML={{ __html: folktale.content.slice(0, 300) + '...' }}
                 />
-                <div style={styles.loginPrompt}>
-                  <p>Want to read the full story?</p>
+                <div className="text-center p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
+                  <p className="text-lg text-gray-600 mb-4 font-semibold">Want to read the full story?</p>
                   <button
-                    style={styles.loginButton}
+                    className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                     onClick={() => navigate('/login')}
                   >
                     Log in or Register
@@ -195,13 +245,13 @@ function FolktaleDetail() {
         </div>
 
         {token && (
-          <div style={styles.ratingSection}>
-            <h3 style={styles.ratingTitle}>Rate this folktale</h3>
-            <div style={styles.ratingControls}>
+          <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
+            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
+            <div className="flex gap-4 items-center flex-wrap">
               <select
                 value={rating}
                 onChange={(e) => setRating(parseInt(e.target.value))}
-                style={styles.ratingSelect}
+                className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
               >
                 {[1, 2, 3, 4, 5].map((num) => (
                   <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
@@ -209,7 +259,7 @@ function FolktaleDetail() {
               </select>
               <button
                 onClick={handleRate}
-                style={styles.rateButton}
+                className="bg-amber-600 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
               >
                 Submit Rating
               </button>
@@ -222,180 +272,5 @@ function FolktaleDetail() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '20px',
-    fontFamily: "'Merriweather', serif",
-    color: '#3a3a3a',
-    lineHeight: '1.6',
-  },
-  searchContainer: {
-    marginBottom: '30px',
-  },
-  content: {
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    padding: '30px',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-  },
-  header: {
-    marginBottom: '30px',
-    textAlign: 'center',
-  },
-  title: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '2.5rem',
-    color: '#5c3c10',
-    marginBottom: '15px',
-  },
-  meta: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: '15px',
-    marginBottom: '20px',
-    fontSize: '0.95rem',
-    alignItems: 'center', // Align items vertically
-  },
-  metaItem: {
-    backgroundColor: '#f9f5e9',
-    padding: '5px 12px',
-    borderRadius: '20px',
-  },
-  rating: {
-    backgroundColor: '#f9f5e9',
-    padding: '5px 12px',
-    borderRadius: '20px',
-  },
-  star: {
-    marginLeft: '5px',
-    color: '#d4a017',
-  },
-  ratingCount: {
-    marginLeft: '5px',
-    fontSize: '0.85rem',
-    color: '#666',
-  },
-  bookmarkButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '5px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  bookmarkIcon: {
-    fontSize: '1.5rem',
-    color: '#5c3c10',
-  },
-  imageContainer: {
-    margin: '0 auto 30px',
-    maxWidth: '800px',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-  },
-  image: {
-    width: '100%',
-    height: 'auto',
-    display: 'block',
-  },
-  adultWarning: {
-    backgroundColor: '#fff3cd',
-    color: '#856404',
-    border: '1px solid #ffeeba',
-    padding: '15px 20px',
-    borderRadius: '5px',
-    marginBottom: '25px',
-    fontSize: '1rem',
-    lineHeight: '1.6',
-  },
-  storyContainer: {
-    margin: '40px 0',
-  },
-  storyTitle: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '1.8rem',
-    color: '#5c3c10',
-    borderBottom: '2px solid #e0c9a6',
-    paddingBottom: '10px',
-    marginBottom: '20px',
-  },
-  storyContent: {
-    fontSize: '1.1rem',
-    lineHeight: '1.8',
-  },
-  paragraph: {
-    marginBottom: '20px',
-  },
-  loginPrompt: {
-    textAlign: 'center',
-    margin: '30px 0',
-    padding: '20px',
-    backgroundColor: '#f9f5e9',
-    borderRadius: '8px',
-  },
-  loginButton: {
-    backgroundColor: '#5c3c10',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '10px 20px',
-    fontSize: '1rem',
-    cursor: 'pointer',
-    marginTop: '15px',
-    transition: 'background-color 0.3s',
-  },
-  ratingSection: {
-    margin: '40px 0',
-    padding: '25px',
-    backgroundColor: '#f9f5e9',
-    borderRadius: '8px',
-  },
-  ratingTitle: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '1.5rem',
-    color: '#5c3c10',
-    marginBottom: '15px',
-  },
-  ratingControls: {
-    display: 'flex',
-    gap: '15px',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  ratingSelect: {
-    padding: '8px 15px',
-    borderRadius: '4px',
-    border: '1px solid #ddd',
-    fontSize: '1rem',
-    backgroundColor: '#fff',
-  },
-  rateButton: {
-    backgroundColor: '#d4a017',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '8px 20px',
-    fontSize: '1rem',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '1.2rem',
-    color: '#5c3c10',
-  },
-  error: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '1.2rem',
-    color: '#d32f2f',
-  },
-};
 
 export default FolktaleDetail;
