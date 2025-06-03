@@ -35,7 +35,7 @@ function Home() {
       });
 
       try {
-        const response = await axios.get(`http://localhost:5000/api/folktales?${apiQuery.toString()}`);
+        const response = await axios.get(`/api/folktales?${apiQuery.toString()}`);
 
         const { folktales, total } = response.data;
         if (!Array.isArray(folktales) || typeof total !== 'number') {
@@ -57,7 +57,7 @@ function Home() {
 
     const fetchPopular = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/folktales/popular');
+        const response = await axios.get('/api/folktales/popular');
 
         if (!Array.isArray(response.data)) {
           throw new Error('Invalid popular folktales format.');
