@@ -46,7 +46,7 @@ function Navbar() {
             setIsMenuOpen(false); // Close menu on navigation
           }}
         >
-          Folktale Haven
+          Legend संसार
         </h1>
 
         {/* Hamburger Icon for Mobile */}
