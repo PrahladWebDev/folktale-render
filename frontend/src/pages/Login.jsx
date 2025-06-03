@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -16,7 +17,7 @@ function Login() {
     setError('');
     
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
         username,
         password,
       });
@@ -31,59 +32,71 @@ function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.searchContainer}>
+    <div className="flex flex-col items-center min-h-screen bg-amber-50 p-4 font-caveat text-gray-800 animate-fadeIn">
+      <div className="w-full max-w-7xl mb-8">
         {/* <SearchBar /> */}
       </div>
       
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Welcome Back</h2>
-          <p style={styles.subtitle}>Sign in to continue to Folktale Haven</p>
+      <div className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-6 sm:p-10 w-full max-w-md">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulseSketchy">
+            Welcome Back
+          </h2>
+          <p className="text-gray-600 text-base">
+            Sign in to continue to Folktale Haven
+          </p>
         </div>
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && (
+          <div className="bg-red-100 text-red-600 p-3 rounded-md border-2 border-red-200 mb-5 text-center text-sm font-semibold animate-shake">
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Username</label>
+        <form onSubmit={handleLogin} className="mb-6">
+          <div className="mb-6">
+            <label className="block mb-2 font-semibold text-sm text-amber-700">
+              Username
+            </label>
             <input
               type="text"
               placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              style={styles.input}
+              className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 placeholder-gray-400"
             />
           </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Password</label>
+          <div className="mb-6">
+            <label className="block mb-2 font-semibold text-sm text-gray-600">
+              Password
+            </label>
             <input
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={styles.input}
+              className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
             />
           </div>
 
-          <button 
-            type="submit" 
-            style={styles.button}
+          <button
+            type="submit"
             disabled={isLoading}
+            className="w-full bg-amber-900 text-white p-3 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <div style={styles.footer}>
-          <p style={styles.footerText}>
+        <div className="text-center pt-5 border-t border-amber-100">
+          <p className="text-gray-600 text-base">
             Don't have an account?{' '}
-            <a 
-              href="/register" 
-              style={styles.link}
+            <a
+              href="/register"
+              className="text-amber-600 font-semibold hover:underline"
               onClick={(e) => {
                 e.preventDefault();
                 navigate('/register');
@@ -97,118 +110,5 @@ function Login() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#f9f5e9',
-    padding: '20px',
-    fontFamily: "'Merriweather', serif"
-  },
-  searchContainer: {
-    width: '100%',
-    maxWidth: '1200px',
-    marginBottom: '30px'
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: '12px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-    padding: '40px',
-    width: '100%',
-    maxWidth: '450px',
-    margin: '0 auto'
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '30px'
-  },
-  title: {
-    fontSize: '2rem',
-    color: '#5c3c10',
-    marginBottom: '10px',
-    fontFamily: "'Playfair Display', serif"
-  },
-  subtitle: {
-    color: '#666',
-    fontSize: '0.95rem'
-  },
-  error: {
-    backgroundColor: '#ffebee',
-    color: '#d32f2f',
-    padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '20px',
-    fontSize: '0.9rem',
-    textAlign: 'center'
-  },
-  form: {
-    marginBottom: '20px'
-  },
-  formGroup: {
-    marginBottom: '20px'
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontWeight: '600',
-    color: '#5c3c10',
-    fontSize: '0.95rem'
-  },
-  input: {
-    width: '100%',
-    padding: '12px 16px',
-    borderRadius: '6px',
-    border: '1px solid #e0c9a6',
-    fontSize: '1rem',
-    fontFamily: "'Merriweather', serif",
-    transition: 'all 0.3s ease',
-    ':focus': {
-      outline: 'none',
-      borderColor: '#d4a017',
-      boxShadow: '0 0 0 3px rgba(212, 160, 23, 0.2)'
-    }
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#5c3c10',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '14px',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    marginTop: '10px',
-    ':hover': {
-      backgroundColor: '#6e4a1f'
-    },
-    ':disabled': {
-      backgroundColor: '#cccccc',
-      cursor: 'not-allowed'
-    }
-  },
-  footer: {
-    textAlign: 'center',
-    paddingTop: '20px',
-    borderTop: '1px solid #eee'
-  },
-  footerText: {
-    color: '#666',
-    fontSize: '0.95rem'
-  },
-  link: {
-    color: '#d4a017',
-    fontWeight: '600',
-    textDecoration: 'none',
-    ':hover': {
-      textDecoration: 'underline'
-    }
-  }
-};
 
 export default Login;
