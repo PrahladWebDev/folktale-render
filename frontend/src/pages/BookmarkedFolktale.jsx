@@ -23,7 +23,7 @@ function BookmarkedFolktale() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/folktales/bookmark`, {
+        const response = await axios.get(`/api/folktales/bookmark`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const validBookmarks = response.data.filter((bookmark) => bookmark.folktaleId);
@@ -48,7 +48,7 @@ function BookmarkedFolktale() {
       return;
     }
     try {
-      await axios.delete(`http://localhost:5000/api/folktales/bookmarks/${folktaleId}`, {
+      await axios.delete(`/api/folktales/bookmarks/${folktaleId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookmarks(bookmarks.filter((bookmark) => 
