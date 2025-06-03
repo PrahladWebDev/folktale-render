@@ -31,7 +31,6 @@ function RandomFolktale() {
         setIsLoading(false);
       } catch (err) {
         console.log(err);
-
         setError("Unable to load a folktale. Please try again later.");
         setIsLoading(false);
       }
@@ -44,7 +43,6 @@ function RandomFolktale() {
         setNextFolktale(data);
       } catch (err) {
         console.log(err);
-
         setError("Unable to load a folktale. Please try again later.");
       }
     };
@@ -91,11 +89,11 @@ function RandomFolktale() {
               to={`/folktale/${folktale._id}`}
               className="no-underline text-inherit w-full"
             >
-              <div className="w-full max-h-[400px] rounded-lg overflow-hidden shadow-md bg-gray-100 flex justify-center items-center transform hover:scale-105 transition-transform duration-300">
+              <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md bg-gray-100 flex justify-center items-center transform hover:scale-105 transition-transform duration-300">
                 <img
                   src={folktale.imageUrl}
                   alt={folktale.title}
-                  className="w-full h-auto max-h-[400px] object-contain transition-transform duration-300"
+                  className="w-[600px] h-[400px] object-contain transition-transform duration-300"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src =
