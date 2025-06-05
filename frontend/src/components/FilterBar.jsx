@@ -240,7 +240,6 @@ function FilterBar() {
   <option value="Zimbabwe">Zimbabwe</option>
 </select>
 
-        </select>
       </div>
 
       <div className="flex items-center gap-2 flex-1 min-w-[200px] md:flex-row flex-col">
