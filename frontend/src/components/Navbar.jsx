@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
-import { FaBookmark, FaBars, FaTimes } from "react-icons/fa";
+import { FaBookmark, FaBars, FaTimes, FaUser } from "react-icons/fa";
 
 function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // State for toggling menu
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [username, setUsername] = useState(null); // State for username
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -18,8 +19,9 @@ function Navbar() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsAdmin(response.data.isAdmin);
+          setUsername(response.data.username); // Set username from response
         } catch (error) {
-          console.error("Error checking admin:", error);
+          console.error("Error checking user:", error);
         }
       }
     };
@@ -28,8 +30,9 @@ function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    setUsername(null); // Clear username on logout
     navigate("/login");
-    setIsMenuOpen(false); // Close menu on logout
+    setIsMenuOpen(false);
   };
 
   const toggleMenu = () => {
@@ -43,7 +46,7 @@ function Navbar() {
           className="text-2xl sm:text-3xl font-bold text-amber-900 cursor-pointer hover:text-amber-700 transition-colors duration-200"
           onClick={() => {
             navigate("/");
-            setIsMenuOpen(false); // Close menu on navigation
+            setIsMenuOpen(false);
           }}
         >
           Legend संसार
@@ -58,9 +61,15 @@ function Navbar() {
           {isMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
 
-        {/* Search Bar for Desktop */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
+        {/* Search Bar and Username for Desktop */}
+        <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
+          {username && (
+            <div className="flex items-center gap-2 text-amber-900 font-semibold">
+              <FaUser />
+              <span className="truncate max-w-[150px]">{username}</span>
+            </div>
+          )}
         </div>
 
         {/* Desktop Menu */}
@@ -123,16 +132,22 @@ function Navbar() {
         }`}
       >
         <div className="flex flex-col gap-3 pt-4">
-          {/* Search Bar for Mobile */}
-          <div className="px-4">
+          {/* Search Bar and Username for Mobile */}
+          <div className="px-4 flex flex-col gap-3">
             <SearchBar />
+            {username && (
+              <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                <FaUser />
+                <span className="truncate max-w-[200px]">{username}</span>
+              </div>
+            )}
           </div>
 
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
             onClick={() => {
               navigate("/map");
-              setIsMenuOpen(false); // Close menu on navigation
+              setIsMenuOpen(false);
             }}
           >
             <span>🌍</span> Map
@@ -142,12 +157,12 @@ function Navbar() {
             className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
             onClick={() => {
               navigate("/bookmarks");
-              setIsMenuOpen(false); // Close menu on navigation
+              setIsMenuOpen(false);
             }}
             title="Bookmarks"
           >
             <FaBookmark />
-          </button>
+        </button>
 
           {token ? (
             <>
@@ -156,7 +171,7 @@ function Navbar() {
                   className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                   onClick={() => {
                     navigate("/admin");
-                    setIsMenuOpen(false); // Close menu on navigation
+                    setIsMenuOpen(false);
                   }}
                 >
                   Admin Panel
@@ -175,7 +190,7 @@ function Navbar() {
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={() => {
                   navigate("/login");
-                  setIsMenuOpen(false); // Close menu on navigation
+                  setIsMenuOpen(false);
                 }}
               >
                 Login
@@ -184,7 +199,7 @@ function Navbar() {
                 className="px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
                 onClick={() => {
                   navigate("/register");
-                  setIsMenuOpen(false); // Close menu on navigation
+                  setIsMenuOpen(false);
                 }}
               >
                 Register
