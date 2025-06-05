@@ -445,7 +445,6 @@ function AdminPanel() {
   <option value="Zimbabwe">Zimbabwe</option>
 </select>
 
-            </select>
           </div>
 
           <div className="flex flex-col">
