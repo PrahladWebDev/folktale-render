@@ -86,7 +86,7 @@ function AdminPanel() {
 
     try {
       const response = await axios.post(
-        '/api/folktales/generate-story',
+        '/api/generate-story',
         {
           genre: form.genre,
           region: form.region,
@@ -109,11 +109,20 @@ function AdminPanel() {
 
       // If no title is provided, generate one from the content or use a fallback
       if (!title) {
-        const firstSentenceMatch = content.match(/^.*?[.!?]/);
-        title = firstSentenceMatch
-          ? firstSentenceMatch[0].replace(/[.!?]$/, '').trim().substring(0, 50)
-          : content.split(' ').slice(0, 5).join(' ').trim() // Alternative: First 5 words
-          : `A ${form.genre} Tale from ${form.region}`; // Fallback
+        if (content) {
+          const firstSentenceMatch = content.match(/^.*?[.!?]/);
+          if (firstSentenceMatch) {
+            title = firstSentenceMatch[0].replace(/[.!?]$/, '').trim().substring(0, 50);
+          } else {
+            const words = content.split(' ').filter(word => word);
+            title = words.length >= 5 ? words.slice(0, 5).join(' ').trim() : words.join(' ').trim();
+            if (!title) {
+              title = `A ${form.genre} Tale from ${form.region}`;
+            }
+          }
+        } else {
+          title = `A ${form.genre} Tale from ${form.region}`;
+        }
       }
 
       // Always set the title and content, overriding any existing title
@@ -497,7 +506,7 @@ function AdminPanel() {
               <option value="Tuvalu">Tuvalu</option>
               <option value="Uganda">Uganda</option>
               <option value="Ukraine">Ukraine</option>
-              <optionというのは value="United Arab Emirates">United Arab Emirates</option>
+              <option value="United Arab Emirates">United Arab Emirates</option>
               <option value="United Kingdom">United Kingdom</option>
               <option value="United States">United States</option>
               <option value="Uruguay">Uruguay</option>
@@ -520,7 +529,7 @@ function AdminPanel() {
               onChange={handleInputChange}
               required
               disabled={loading || generatingStory}
-              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Genre</option>
               <option value="Fable">Fable</option>
@@ -552,12 +561,12 @@ function AdminPanel() {
               onChange={handleInputChange}
               required
               disabled={loading || generatingStory}
-              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300"
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Age Group</option>
               <option value="Kids">Kids</option>
               <option value="Teens">Teens</option>
-              <option value="Adult">Adult</option>
+              <option value="Adults">Adults</option>
             </select>
           </div>
 
@@ -570,14 +579,14 @@ function AdminPanel() {
               onChange={handleImageChange}
               required={!editId}
               disabled={loading || generatingStory}
-              className="p-2 rounded-md border-2 border-blue-600 bg-white text-lg file:mr-4 py-1 file:px-2 file:rounded-md file:border-0 file:bg-blue-100 file-text-blue-600 file:font-semibold"
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-amber-100 file:text-amber-900 file:font-semibold"
             />
             {imagePreview && (
               <div className="mt-2">
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="max-w-full max-h-48 rounded-md"
+                  className="max-w-full max-h-48 rounded-lg"
                 />
               </div>
             )}
@@ -590,16 +599,16 @@ function AdminPanel() {
               value={form.content}
               onChange={handleContentChange}
               modules={quillModules}
-              className="bg-white rounded-md border-2 border-blue-200"
+              className="bg-white rounded-md border-2 border-amber-200"
               readOnly={loading || generatingStory}
             />
           </div>
         </div>
 
         {uploadProgress > 0 && uploadProgress < 100 && (
-          <div className="relative h-6 bg-blue-100 rounded-full overflow-hidden mb-6">
+          <div className="relative h-6 bg-amber-100 rounded-full overflow-hidden mb-6">
             <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-300"
+              className="h-full bg-amber-900 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             ></div>
             <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold">
@@ -612,7 +621,7 @@ function AdminPanel() {
           <button
             type="submit"
             disabled={loading || generatingStory}
-            className="bg-blue-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bg-amber-900 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {editId ? 'Update Folktale' : 'Create Folktale'}
           </button>
@@ -620,7 +629,7 @@ function AdminPanel() {
             type="button"
             onClick={handleGenerateStory}
             disabled={loading || generatingStory}
-            className="bg-blue-500 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-blue-600 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Generate Story
           </button>
@@ -638,7 +647,7 @@ function AdminPanel() {
                 setLoading(false);
               }}
               disabled={loading || generatingStory}
-              className="bg-blue-400 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-blue-500 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="bg-orange-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-orange-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -646,9 +655,9 @@ function AdminPanel() {
         </div>
       </form>
 
-      <hr className="my-8 border-blue-300" />
+      <hr className="my-8 border-amber-300" />
 
-      <h3 className="text-2xl font-bold text-blue-800 mb-4 animate-pulse">
+      <h3 className="text-2xl font-bold text-amber-900 mb-4 animate-pulseSketchy">
         Existing Folktales
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -657,40 +666,40 @@ function AdminPanel() {
             No folktales found.
           </p>
         )}
-        {folktales.map((folktale) => (
+        {folktales.map((f) => (
           <div
-            key={folktale._id}
-            className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 shadow-md border-2 border-blue-200"
+            key={f._id}
+            className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg p-4 shadow-md border-2 border-amber-200 animate-fadeIn"
           >
-            <h4 className="text-lg font-bold text-blue-800">{folktale.title}</h4>
+            <h4 className="text-lg font-bold text-amber-900">{f.title}</h4>
             <p className="text-sm">
-              <span className="font-bold text-blue-800">Region:</span> {folktale.region}
+              <span className="font-bold text-amber-900">Region:</span> {f.region}
             </p>
             <p className="text-sm">
-              <span className="font-bold text-blue-800">Genre:</span> {folktale.genre}
+              <span className="font-bold text-amber-900">Genre:</span> {f.genre}
             </p>
             <p className="text-sm">
-              <span className="font-bold text-blue-800">Age Group:</span> {folktale.ageGroup}
+              <span className="font-bold text-amber-900">Age Group:</span> {f.ageGroup}
             </p>
-            {folktale.imageUrl && (
+            {f.imageUrl && (
               <img
-                src={folktale.imageUrl}
-                alt={folktale.title}
-                className="w-full h-24 object-cover rounded-md mt-2"
+                src={f.imageUrl}
+                alt={f.title}
+                className="w-36 h-24 object-cover rounded-md mt-2"
               />
             )}
             <div className="flex gap-2 mt-2">
               <button
-                onClick={() => handleEdit(folktale)}
+                onClick={() => handleEdit(f)}
                 disabled={loading || generatingStory}
-                className="flex-1 bg-green-500 text-white py-2 rounded-md font-bold hover:bg-green-600 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 bg-green-600 text-white py-2 rounded-md font-bold hover:bg-green-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Edit
               </button>
               <button
-                onClick={() => handleDelete(folktale._id)}
+                onClick={() => handleDelete(f._id)}
                 disabled={loading || generatingStory}
-                className="flex-1 bg-red-500 text-white py-2 rounded-md font-bold hover:bg-red-600 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 bg-red-600 text-white py-2 rounded-md font-bold hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Delete
               </button>
