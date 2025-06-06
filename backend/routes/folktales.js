@@ -6,6 +6,7 @@ import { auth } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import cloudinary from '../config/cloudinary.js';
 import multer from 'multer';
+import axios from 'axios'; // ADD THIS
 import path from 'path';
 import dotenv from 'dotenv';
 import fs from 'fs/promises'; // Use promises version for async/await
@@ -49,11 +50,11 @@ router.post('/generate-story', auth, async (req, res) => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o', // FIXED MODEL NAME
         messages: [
           {
             role: 'user',
-            content: `Generate a ${genre} folktale from ${region} suitable for ${ageGroup}. The story should be engaging, culturally relevant, and appropriate for the selected age group. Provide a title prefixed with "Title:" followed by the story content. Ensure the title reflects the story's theme or main element.`,
+            content: `Generate a ${genre} folktale from ${region} suitable for ${ageGroup}. The story should be engaging, culturally relevant, and appropriate for the selected age group. Provide a title prefixed with "Title:" followed by the story content.`,
           },
         ],
         max_tokens: 1000,
@@ -72,16 +73,20 @@ router.post('/generate-story', auth, async (req, res) => {
     res.json({ generatedText });
   } catch (error) {
     console.error('Error generating story:', error);
+    console.error('Error response data:', error.response?.data);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+
     let errorMessage = 'Failed to generate story.';
     if (error.code === 'ECONNABORTED') {
       errorMessage = 'Request timed out. Please try again later.';
     } else if (error.response?.data?.error?.message) {
       errorMessage = error.response.data.error.message;
     }
+
     res.status(500).json({ message: errorMessage });
   }
 });
-
 // Create a new folktale with image upload
 router.post(
   '/',
