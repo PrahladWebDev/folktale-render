@@ -86,7 +86,7 @@ function AdminPanel() {
 
     try {
       const response = await axios.post(
-        '/api/generate-story',
+        '/api/folktales/generate-story',
         {
           genre: form.genre,
           region: form.region,
