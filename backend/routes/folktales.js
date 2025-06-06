@@ -7,10 +7,11 @@ import { body, validationResult } from 'express-validator';
 import cloudinary from '../config/cloudinary.js';
 import multer from 'multer';
 import path from 'path';
+import dotenv from 'dotenv';
 import fs from 'fs/promises'; // Use promises version for async/await
 
 const router = express.Router();
-
+dotenv.config();
 // Set up Multer for file uploads with storage configuration
 // Use '/tmp' as the destination directory because it is writable in the Render environment
 const storage = multer.diskStorage({
