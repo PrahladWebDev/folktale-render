@@ -37,6 +37,50 @@ const upload = multer({
   },
 });
 
+router.post('/generate-story', auth, async (req, res) => {
+  const { genre, region, ageGroup } = req.body;
+
+  if (!genre || !region || !ageGroup) {
+    return res.status(400).json({ message: 'Genre, region, and age group are required.' });
+  }
+
+  try {
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: `Generate a ${genre} folktale from ${region} suitable for ${ageGroup}. The story should be engaging, culturally relevant, and appropriate for the selected age group. Provide a title prefixed with "Title:" followed by the story content. Ensure the title reflects the story's theme or main element.`,
+          },
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    const generatedText = response.data.choices[0].message.content;
+    res.json({ generatedText });
+  } catch (error) {
+    console.error('Error generating story:', error);
+    let errorMessage = 'Failed to generate story.';
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. Please try again later.';
+    } else if (error.response?.data?.error?.message) {
+      errorMessage = error.response.data.error.message;
+    }
+    res.status(500).json({ message: errorMessage });
+  }
+});
+
 // Create a new folktale with image upload
 router.post(
   '/',
