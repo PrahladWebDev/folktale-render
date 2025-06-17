@@ -75,7 +75,7 @@ function CountryMap() {
               setFolktales([]);
             }
           } catch (err) {
-            console.error("Error fetching folktales:", err);
+            console.error("Error fetching legends:", err);
             setShowModal(true);
             setFolktales([]);
           } finally {
@@ -141,7 +141,7 @@ function CountryMap() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg md:text-xl font-semibold text-amber-900 mb-5 text-center border-b-2 border-amber-200 pb-3">
-              Folktales from {selectedCountry}
+              Legends from {selectedCountry}
             </h3>
             
             {isLoading ? (
