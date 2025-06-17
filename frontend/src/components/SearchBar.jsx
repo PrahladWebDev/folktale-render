@@ -22,7 +22,7 @@ function SearchBar() {
     <div className="flex max-w-md w-full mx-auto font-caveat animate-fadeIn">
       <input
         type="text"
-        placeholder="Search folktales..."
+        placeholder="Search legends..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyPress={handleKeyPress}
