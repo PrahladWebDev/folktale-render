@@ -122,7 +122,7 @@ function Home() {
         </div>
       )}
 
-      <h2 className="text-4xl sm:text-5xl font-bold mb-8 text-center text-amber-900 border-b-4 border-amber-300 pb-4 animate-pulseSketchy">Browse Folktales</h2>
+      <h2 className="text-4xl sm:text-5xl font-bold mb-8 text-center text-amber-900 border-b-4 border-amber-300 pb-4 animate-pulseSketchy">Browse Legends</h2>
       <FilterBar />
 
       {errorFolktales ? (
