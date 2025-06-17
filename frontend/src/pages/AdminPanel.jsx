@@ -532,7 +532,7 @@ function AdminPanel() {
               className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
             >
               <option value="">Select Genre</option>
-              <option value="">Conspiracy Theory</option>
+              <option value="Conspiracy Theory">Conspiracy Theory</option>
               <option value="Fable">Fable</option>
               <option value="Myth">Myth</option>
               <option value="Legend">Legend</option>
