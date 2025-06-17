@@ -43,7 +43,7 @@ function Login() {
             Welcome Back
           </h2>
           <p className="text-gray-600 text-base">
-            Sign in to continue to Folktale Haven
+            Sign in to continue to Legend Sansar
           </p>
         </div>
 
