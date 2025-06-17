@@ -16,7 +16,7 @@ function RandomFolktale() {
       );
       return response.data;
     } catch (err) {
-      console.error("Failed to fetch folktale:", err);
+      console.error("Failed to fetch legend:", err);
       throw err;
     }
   };
@@ -31,7 +31,7 @@ function RandomFolktale() {
         setIsLoading(false);
       } catch (err) {
         console.log(err);
-        setError("Unable to load a folktale. Please try again later.");
+        setError("Unable to load a legend. Please try again later.");
         setIsLoading(false);
       }
     };
@@ -43,7 +43,7 @@ function RandomFolktale() {
         setNextFolktale(data);
       } catch (err) {
         console.log(err);
-        setError("Unable to load a folktale. Please try again later.");
+        setError("Unable to load a legend. Please try again later.");
       }
     };
 
