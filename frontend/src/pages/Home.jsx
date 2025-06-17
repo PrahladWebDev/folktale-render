@@ -90,11 +90,11 @@ function Home() {
     <div className="home mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 font-caveat text-gray-800 animate-fadeIn">
       <RandomFolktale />
 
-      <h2 className="text-4xl sm:text-5xl font-bold mb-8 text-center text-amber-900 border-b-4 border-amber-300 pb-4 animate-pulseSketchy">Popular Folktales</h2>
+      <h2 className="text-4xl sm:text-5xl font-bold mb-8 text-center text-amber-900 border-b-4 border-amber-300 pb-4 animate-pulseSketchy">Popular Legends</h2>
       {errorPopular ? (
         <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake"> {errorPopular}</p>
       ) : popular.length === 0 ? (
-        <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake">No popular folktales found.</p>
+        <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake">No popular legends found.</p>
       ) : (
         <div className="relative flex items-center mb-12">
           <button
