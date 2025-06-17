@@ -11,7 +11,6 @@ function CountryMap() {
   const [showModal, setShowModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [countriesWithData, setCountriesWithData] = useState([]);
 
   useEffect(() => {
     const map = new maplibregl.Map({
@@ -21,68 +20,10 @@ function CountryMap() {
       zoom: 1.5,
     });
 
-    map.on("load", async () => {
-      // Fetch countries with folktales
-      try {
-        const response = await fetch("/api/folktales/countries");
-        const data = await response.json();
-        setCountriesWithData(data.countries || []);
-      } catch (err) {
-        console.error("Error fetching countries with data:", err);
-      }
-
+    map.on("load", () => {
       map.addSource("countries", {
         type: "geojson",
         data: "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
-      });
-
-      // Add point source for glowing dots
-      map.addSource("country-points", {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: countriesWithData.map(country => ({
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: getCountryCentroid(country), // Implement this function based on your data
-            },
-            properties: {
-              name: country,
-            },
-          })),
-        },
-      });
-
-      // Add glowing dots layer
-      map.addLayer({
-        id: "country-points",
-        type: "circle",
-        source: "country-points",
-        paint: {
-          "circle-radius": 6,
-          "circle-color": "#ffcc00",
-          "circle-opacity": 0.8,
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#ffffff",
-          // Add glow effect
-          "circle-blur": 0.5,
-          // Pulse animation
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            1, 4,
-            5, 8,
-          ],
-          "circle-opacity": [
-            "interpolate",
-            ["linear"],
-            ["number", ["get", "pulse"], 0],
-            0, 0.5,
-            1, 0.8,
-          ],
-        },
       });
 
       map.addLayer({
@@ -169,52 +110,10 @@ function CountryMap() {
         hoveredCountryId = null;
         map.getCanvas().style.cursor = "";
       });
-
-      // Update points when countriesWithData changes
-      map.getSource("country-points").setData({
-        type: "FeatureCollection",
-        features: countriesWithData.map(country => ({
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: getCountryCentroid(country),
-          },
-          properties: {
-            name: country,
-          },
-        })),
-      });
     });
 
-    // Pulse animation for glowing dots
-    let pulse = 0;
-    const animatePulse = () => {
-      pulse = (pulse + 0.02) % 1;
-      map.setPaintProperty("country-points", "circle-opacity", [
-        "interpolate",
-        ["linear"],
-        ["number", ["get", "pulse"], pulse],
-        0, 0.5,
-        1, 0.8,
-      ]);
-      requestAnimationFrame(animatePulse);
-    };
-    animatePulse();
-
     return () => map.remove();
-  }, [countriesWithData]);
-
-  // Helper function to get country centroid (implement based on your needs)
-  const getCountryCentroid = (countryName) => {
-    // This is a placeholder - you should implement actual centroid coordinates
-    // You could use a lookup table or calculate from GeoJSON
-    const centroids = {
-      "United States": [-98.5, 39.5],
-      "India": [78.9629, 20.5937],
-      // Add more countries as needed
-    };
-    return centroids[countryName] || [0, 0]; // Default to [0,0] if not found
-  };
+  }, []);
 
   const handleFolktaleClick = (id) => {
     setShowModal(false);
