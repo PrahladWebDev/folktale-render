@@ -104,18 +104,18 @@ function BookmarkedFolktale() {
         theme="light"
       />
       <h1 className="text-2xl sm:text-3xl font-semibold text-center text-amber-900 mb-6 border-b-4 border-amber-300 pb-3 animate-pulseSketchy">
-        Your Bookmarked Folktales
+        Your Bookmarked Legends
       </h1>
       {bookmarks.length === 0 ? (
         <div className="text-center p-8 bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl shadow-lg border-2 border-amber-200 mx-auto max-w-lg animate-fadeIn">
           <p className="text-lg text-gray-600 mb-4 font-semibold animate-shake">
-            You haven't bookmarked any folktales yet.
+            You haven't bookmarked any legends yet.
           </p>
           <button
             onClick={() => navigate('/')}
             className="bg-amber-900 text-white px-6 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
           >
-            Explore Folktales
+            Explore Legends
           </button>
         </div>
       ) : (
