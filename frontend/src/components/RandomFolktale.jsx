@@ -71,12 +71,12 @@ function RandomFolktale() {
     <div className="mx-auto max-w-xl bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 m-8 shadow-lg border-2 border-amber-300 font-caveat text-gray-800 transition-opacity duration-300 ease-in-out">
       {isLoading || error || !folktale ? (
         <div className="min-h-[450px] flex items-center justify-center text-gray-600 italic rounded-xl border-2 border-amber-300 bg-amber-50 p-6 shadow-md animate-shake">
-          {isLoading && <p className="text-xl">Loading folktale...</p>}
+          {isLoading && <p className="text-xl">Loading legend...</p>}
           {error && (
             <p className="text-red-600 text-xl font-semibold">{error}</p>
           )}
           {!isLoading && !error && !folktale && (
-            <p className="text-xl">No folktale to display.</p>
+            <p className="text-xl">No legend to display.</p>
           )}
         </div>
       ) : (
