@@ -124,7 +124,7 @@ function CountryMap() {
   return (
     <div className="max-w-7xl mx-auto px-4 font-caveat text-gray-800 animate-fadeIn">
       <h2 className="text-center py-5 text-2xl md:text-3xl font-semibold text-amber-900 bg-gradient-to-r from-amber-50 to-orange-100 shadow-sm mb-4 animate-pulseSketchy">
-        🌍 Click a Country to Explore Its Folktales
+        🌍 Click a Country to Explore Its Legends
       </h2>
       <div
         ref={mapRef}
@@ -146,11 +146,11 @@ function CountryMap() {
             
             {isLoading ? (
               <div className="text-center p-5 text-gray-600 text-base animate-pulseSketchy">
-                Loading folktales...
+                Loading Legends...
               </div>
             ) : folktales.length === 0 ? (
               <div className="text-center p-5 text-gray-600 text-base animate-shake">
-                No folktales found for {selectedCountry}.
+                No Legends found for {selectedCountry}.
               </div>
             ) : (
               <ul className="list-none p-0 m-0">
