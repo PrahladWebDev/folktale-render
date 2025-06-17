@@ -39,7 +39,7 @@ function Home() {
 
         const { folktales, total } = response.data;
         if (!Array.isArray(folktales) || typeof total !== 'number') {
-          throw new Error('Invalid folktale data structure.');
+          throw new Error('Invalid legend data structure.');
         }
 
         setFolktales(folktales);
@@ -50,7 +50,7 @@ function Home() {
         if (error.response?.status === 500) {
           setErrorFolktales('Server error. Please try again later.');
         } else {
-          setErrorFolktales('Unable to load folktales. Please try again later.');
+          setErrorFolktales('Unable to load legends. Please try again later.');
         }
       }
     };
@@ -60,14 +60,14 @@ function Home() {
         const response = await axios.get('/api/folktales/popular');
 
         if (!Array.isArray(response.data)) {
-          throw new Error('Invalid popular folktales format.');
+          throw new Error('Invalid popular legends format.');
         }
 
         setPopular(response.data);
         setErrorPopular(null);
       } catch (error) {
-        console.error('Error fetching popular folktales:', error);
-        setErrorPopular('Unable to load popular folktales.');
+        console.error('Error fetching popular legends:', error);
+        setErrorPopular('Unable to load popular legends.');
       }
     };
 
