@@ -128,7 +128,7 @@ function Home() {
       {errorFolktales ? (
         <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake">{errorFolktales}</p>
       ) : folktales.length === 0 ? (
-        <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake">No folktales match your filters.</p>
+        <p className="text-red-600 text-center text-xl font-semibold my-8 animate-shake">No legends match your filters.</p>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 my-12">
