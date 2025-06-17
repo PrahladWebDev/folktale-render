@@ -109,7 +109,7 @@ function CommentSection({ folktaleId }) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your thoughts about this folktale..."
+            placeholder="Share your thoughts about this legend..."
             className="w-full min-h-[100px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
           />
           <button
