@@ -40,7 +40,7 @@ function Register() {
       <div className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-6 sm:p-10 w-full max-w-md">
         <div className="text-center mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulseSketchy">
-            Join Folktale Haven
+            Join Legend Sansar
           </h2>
           <p className="text-gray-600 text-base">
             Create your account to explore stories
