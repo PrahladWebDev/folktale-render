@@ -179,16 +179,16 @@ function AdminPanel() {
 
       if (editId) {
         await axios.put(`/api/folktales/${editId}`, formData, config);
-        setSuccess('Folktale updated successfully!');
+        setSuccess('Legend updated successfully!');
         setEditId(null);
       } else {
         if (!imageFile) {
-          setError('An image is required for new folktales.');
+          setError('An image is required for new Legends.');
           setLoading(false);
           return;
         }
         await axios.post('/api/folktales', formData, config);
-        setSuccess('Folktale created successfully!');
+        setSuccess('Legend created successfully!');
       }
 
       setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
@@ -205,8 +205,8 @@ function AdminPanel() {
 
       setTimeout(() => setSuccess(''), 4000);
     } catch (error) {
-      console.error('Error saving folktale:', error);
-      let errorMessage = 'Failed to save folktale.';
+      console.error('Error saving Legend:', error);
+      let errorMessage = 'Failed to save Legend.';
       if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
         errorMessage = 'Request timed out. Try uploading a smaller image or check server status.';
       } else if (error.response?.data?.message) {
@@ -237,7 +237,7 @@ function AdminPanel() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this folktale?')) {
+    if (window.confirm('Are you sure you want to delete this Legend?')) {
       try {
         setLoading(true);
         await axios.delete(`/api/folktales/${id}`, {
@@ -247,8 +247,8 @@ function AdminPanel() {
         setFolktales(folktales.filter((f) => f._id !== id));
         setLoading(false);
       } catch (error) {
-        console.error('Error deleting folktale:', error);
-        setError('Failed to delete folktale.');
+        console.error('Error deleting Legend:', error);
+        setError('Failed to delete Legende.');
         setLoading(false);
       }
     }
@@ -281,7 +281,7 @@ function AdminPanel() {
           Admin Panel
         </h2>
         <h3 className="text-xl sm:text-2xl text-amber-800 font-semibold">
-          {editId ? 'Edit Folktale' : 'Create New Folktale'}
+          {editId ? 'Edit Legend' : 'Create New Legend'}
         </h3>
       </div>
 
@@ -303,7 +303,7 @@ function AdminPanel() {
             <input
               type="text"
               name="title"
-              placeholder="Enter folktale title"
+              placeholder="Enter Legend title"
               value={form.title}
               onChange={handleInputChange}
               required
@@ -658,12 +658,12 @@ function AdminPanel() {
       <hr className="my-8 border-amber-300" />
 
       <h3 className="text-2xl font-bold text-amber-900 mb-4 animate-pulseSketchy">
-        Existing Folktales
+        Existing Legends
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {folktales.length === 0 && (
           <p className="text-gray-600 italic text-center col-span-full animate-shake">
-            No folktales found.
+            No Legends found.
           </p>
         )}
         {folktales.map((f) => (
