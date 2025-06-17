@@ -33,7 +33,7 @@ function AdminPanel() {
         });
         setFolktales(response.data);
       } catch (error) {
-        console.error('Error fetching folktales:', error);
+        console.error('Error fetching legends:', error);
         navigate('/login');
       }
     };
@@ -271,7 +271,7 @@ function AdminPanel() {
         <div className="fixed inset-0 bg-amber-900/85 flex flex-col items-center justify-center z-[9999]">
           <div className="border-8 border-gray-200 border-t-amber-100 rounded-full w-16 h-16 animate-spin"></div>
           <div className="mt-4 text-white text-xl">
-            {generatingStory ? 'Generating story...' : 'Saving folktale...'}
+            {generatingStory ? 'Generating story...' : 'Saving legend...'}
           </div>
         </div>
       )}
@@ -623,7 +623,7 @@ function AdminPanel() {
             disabled={loading || generatingStory}
             className="bg-amber-900 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {editId ? 'Update Folktale' : 'Create Folktale'}
+            {editId ? 'Update Legend' : 'Create Legend'}
           </button>
           <button
             type="button"
