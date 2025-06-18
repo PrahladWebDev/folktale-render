@@ -79,9 +79,11 @@ function AdminPanel() {
   const handleAudioChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const filetypes = /mp3/;
+      const filetypes = /mp3|mpeg/;
+      const extname = /\.mp3$/i.test(file.name);
       const maxSizeMB = 10;
-      if (!filetypes.test(file.type)) {
+      console.log('Audio file:', { name: file.name, type: file.type, size: file.size }); // Debug log
+      if (!filetypes.test(file.type) || !extname) {
         setError('Please upload an MP3 audio file.');
         setAudioFile(null);
         setAudioPreview('');
@@ -193,12 +195,17 @@ function AdminPanel() {
         formData.append('audio', audioFile);
       }
 
+      // Debug FormData contents
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
+
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000,
+        timeout: 60000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
@@ -241,6 +248,8 @@ function AdminPanel() {
         errorMessage = 'Request timed out. Try uploading smaller files or check server status.';
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        errorMessage = error.response.data.errors.map(e => e.msg).join(', ');
       }
       setError(errorMessage);
       setLoading(false);
@@ -630,7 +639,7 @@ function AdminPanel() {
             <input
               type="file"
               name="audio"
-              accept="audio/mp3"
+              accept="audio/mp3,audio/mpeg"
               onChange={handleAudioChange}
               disabled={loading || generatingStory}
               className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-amber-100 file:text-amber-900 file:font-semibold"
