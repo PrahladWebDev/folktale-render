@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -55,11 +54,11 @@ function FolktaleDetail() {
           }
         }
       } catch (err) {
-        console.error('Error fetching folktale:', err);
+        console.error('Error fetching legend:', err);
         if (err.response?.status === 404) {
           setError('Folktale not found.');
         } else {
-          setError('Failed to load folktale. Please try again later.');
+          setError('Failed to load legend. Please try again later.');
         }
       } finally {
         setIsLoading(false);
@@ -99,7 +98,7 @@ function FolktaleDetail() {
 
   const handleBookmark = async () => {
     if (!token) {
-      toast.warning('Please log in to bookmark this legend.');
+      toast.warning('Please log in to bookmark this folktale.');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
@@ -135,7 +134,7 @@ function FolktaleDetail() {
   if (isLoading) {
     return (
       <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulseSketchy">
-        Loading legend...
+        Loading Legend...
       </div>
     );
   }
@@ -208,9 +207,19 @@ function FolktaleDetail() {
           />
         </div>
 
+        {folktale.audioUrl && (
+          <div className="max-w-3xl mx-auto mb-8 p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
+            <h2 className="text-xl sm:text-2xl font-bold text-amber-900 mb-4">Listen to the Podcast</h2>
+            <audio controls className="w-full">
+              <source src={folktale.audioUrl} type="audio/mpeg" />
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+        )}
+
         {folktale.ageGroup === 'Adults' && (
           <div className="bg-amber-100 text-amber-800 p-4 rounded-lg border-2 border-amber-200 mb-6 text-base animate-shake">
-            <p><strong className="text-amber-900">⚠️ Warning:</strong> This legend contains content intended for adult readers.</p>
+            <p><strong className="text-amber-900">⚠️ Warning:</strong> This folktale contains content intended for adult readers.</p>
           </div>
         )}
 
@@ -246,7 +255,7 @@ function FolktaleDetail() {
 
         {token && (
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
-            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this legend</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
             <div className="flex gap-4 items-center flex-wrap">
               <select
                 value={rating}
