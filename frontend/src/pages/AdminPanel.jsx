@@ -16,6 +16,8 @@ function AdminPanel() {
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [audioFile, setAudioFile] = useState(null); // New state for audio file
+  const [audioPreview, setAudioPreview] = useState(''); // New state for audio preview
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -33,7 +35,7 @@ function AdminPanel() {
         });
         setFolktales(response.data);
       } catch (error) {
-        console.error('Error fetching legends:', error);
+        console.error('Error fetching folktales:', error);
         navigate('/login');
       }
     };
@@ -74,6 +76,32 @@ function AdminPanel() {
     }
   };
 
+  const handleAudioChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const filetypes = /mp3|wav/;
+      const maxSizeMB = 10; // Set max size for audio files
+      if (!filetypes.test(file.type)) {
+        setError('Please upload an MP3 or WAV audio file.');
+        setAudioFile(null);
+        setAudioPreview('');
+        return;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        setError(`Audio size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+        setAudioFile(null);
+        setAudioPreview('');
+        return;
+      }
+      setAudioFile(file);
+      setAudioPreview(URL.createObjectURL(file));
+      setError('');
+    } else {
+      setAudioFile(null);
+      setAudioPreview('');
+    }
+  };
+
   const handleGenerateStory = async () => {
     if (!form.genre || !form.region || !form.ageGroup) {
       setError('Please select genre, region, and age group before generating a story.');
@@ -102,12 +130,10 @@ function AdminPanel() {
       );
 
       const generatedText = response.data.generatedText;
-      // Extract title and content
       const titleMatch = generatedText.match(/Title:\s*(.*?)\n/);
       let title = titleMatch ? titleMatch[1].trim() : '';
       const content = generatedText.replace(/Title:\s*.*?\n/, '').trim();
 
-      // If no title is provided, generate one from the content or use a fallback
       if (!title) {
         if (content) {
           const firstSentenceMatch = content.match(/^.*?[.!?]/);
@@ -125,7 +151,6 @@ function AdminPanel() {
         }
       }
 
-      // Always set the title and content, overriding any existing title
       setForm({
         ...form,
         title: title,
@@ -164,6 +189,9 @@ function AdminPanel() {
       if (imageFile) {
         formData.append('image', imageFile);
       }
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
 
       const config = {
         headers: {
@@ -179,21 +207,23 @@ function AdminPanel() {
 
       if (editId) {
         await axios.put(`/api/folktales/${editId}`, formData, config);
-        setSuccess('Legend updated successfully!');
+        setSuccess('Folktale updated successfully!');
         setEditId(null);
       } else {
         if (!imageFile) {
-          setError('An image is required for new Legends.');
+          setError('An image is required for new folktales.');
           setLoading(false);
           return;
         }
         await axios.post('/api/folktales', formData, config);
-        setSuccess('Legend created successfully!');
+        setSuccess('Folktale created successfully!');
       }
 
       setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
       setImageFile(null);
       setImagePreview('');
+      setAudioFile(null);
+      setAudioPreview('');
       setUploadProgress(0);
       setLoading(false);
 
@@ -205,10 +235,10 @@ function AdminPanel() {
 
       setTimeout(() => setSuccess(''), 4000);
     } catch (error) {
-      console.error('Error saving Legend:', error);
-      let errorMessage = 'Failed to save Legend.';
+      console.error('Error saving folktale:', error);
+      let errorMessage = 'Failed to save folktale.';
       if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-        errorMessage = 'Request timed out. Try uploading a smaller image or check server status.';
+        errorMessage = 'Request timed out. Try uploading smaller files or check server status.';
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
@@ -228,6 +258,8 @@ function AdminPanel() {
     });
     setImageFile(null);
     setImagePreview(folktale.imageUrl);
+    setAudioFile(null);
+    setAudioPreview(folktale.audioUrl || '');
     setEditId(folktale._id);
     setError('');
     setSuccess('');
@@ -237,7 +269,7 @@ function AdminPanel() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this Legend?')) {
+    if (window.confirm('Are you sure you want to delete this folktale?')) {
       try {
         setLoading(true);
         await axios.delete(`/api/folktales/${id}`, {
@@ -247,8 +279,8 @@ function AdminPanel() {
         setFolktales(folktales.filter((f) => f._id !== id));
         setLoading(false);
       } catch (error) {
-        console.error('Error deleting Legend:', error);
-        setError('Failed to delete Legende.');
+        console.error('Error deleting folktale:', error);
+        setError('Failed to delete folktale.');
         setLoading(false);
       }
     }
@@ -281,7 +313,7 @@ function AdminPanel() {
           Admin Panel
         </h2>
         <h3 className="text-xl sm:text-2xl text-amber-800 font-semibold">
-          {editId ? 'Edit Legend' : 'Create New Legend'}
+          {editId ? 'Edit legend' : 'Create New Legend'}
         </h3>
       </div>
 
@@ -303,7 +335,7 @@ function AdminPanel() {
             <input
               type="text"
               name="title"
-              placeholder="Enter Legend title"
+              placeholder="Enter folktale title"
               value={form.title}
               onChange={handleInputChange}
               required
@@ -586,9 +618,29 @@ function AdminPanel() {
               <div className="mt-2">
                 <img
                   src={imagePreview}
-                  alt="Preview"
+                  alt="Image Preview"
                   className="max-w-full max-h-48 rounded-lg"
                 />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Audio (Max 20MB, MP3/WAV)</label>
+            <input
+              type="file"
+              name="audio"
+              accept="audio/mp3,audio/wav"
+              onChange={handleAudioChange}
+              disabled={loading || generatingStory}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-amber-100 file:text-amber-900 file:font-semibold"
+            />
+            {audioPreview && (
+              <div className="mt-2">
+                <audio controls className="w-full">
+                  <source src={audioPreview} type={audioFile ? audioFile.type : 'audio/mpeg'} />
+                  Your browser does not support the audio element.
+                </audio>
               </div>
             )}
           </div>
@@ -642,6 +694,8 @@ function AdminPanel() {
                 setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
                 setImageFile(null);
                 setImagePreview('');
+                setAudioFile(null);
+                setAudioPreview('');
                 setError('');
                 setSuccess('');
                 setUploadProgress(0);
@@ -664,7 +718,7 @@ function AdminPanel() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {folktales.length === 0 && (
           <p className="text-gray-600 italic text-center col-span-full animate-shake">
-            No Legends found.
+            No legends found.
           </p>
         )}
         {folktales.map((f) => (
@@ -688,6 +742,14 @@ function AdminPanel() {
                 alt={f.title}
                 className="w-36 h-24 object-cover rounded-md mt-2"
               />
+            )}
+            {f.audioUrl && (
+              <div className="mt-2">
+                <audio controls className="w-full">
+                  <source src={f.audioUrl} type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
             )}
             <div className="flex gap-2 mt-2">
               <button
