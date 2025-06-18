@@ -6,21 +6,20 @@ import { auth } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import cloudinary from '../config/cloudinary.js';
 import multer from 'multer';
-import axios from 'axios'; // ADD THIS
+import axios from 'axios';
 import path from 'path';
 import dotenv from 'dotenv';
-import fs from 'fs/promises'; // Use promises version for async/await
+import fs from 'fs/promises';
 
 const router = express.Router();
 dotenv.config();
+
 // Set up Multer for file uploads with storage configuration
-// Use '/tmp' as the destination directory because it is writable in the Render environment
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, '/tmp'); // Writable directory on Render
+    cb(null, '/tmp');
   },
   filename: (req, file, cb) => {
-    // Use timestamp + original file extension for unique filenames
     cb(null, `${Date.now()}${path.extname(file.originalname)}`);
   },
 });
@@ -28,16 +27,25 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
+    const filetypes = /jpeg|jpg|png|mp3/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = filetypes.test(file.mimetype);
     if (extname && mimetype) {
       return cb(null, true);
     } else {
-      cb(new Error('Images only (jpeg, jpg, png)'));
+      cb(new Error('Images (jpeg, jpg, png) or audio (mp3) only'));
     }
   },
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for files
+  },
 });
+
+// Use multer to handle multiple file uploads (image and audio)
+const uploadFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'audio', maxCount: 1 },
+]);
 
 router.post('/generate-story', auth, async (req, res) => {
   const { genre, region, ageGroup } = req.body;
@@ -50,7 +58,7 @@ router.post('/generate-story', auth, async (req, res) => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o', // FIXED MODEL NAME
+        model: 'gpt-4o',
         messages: [
           {
             role: 'user',
@@ -87,11 +95,12 @@ router.post('/generate-story', auth, async (req, res) => {
     res.status(500).json({ message: errorMessage });
   }
 });
-// Create a new folktale with image upload
+
+// Create a new folktale with image and audio upload
 router.post(
   '/',
   auth,
-  upload.single('image'),
+  uploadFields,
   [
     body('title').notEmpty().withMessage('Title is required'),
     body('content').notEmpty().withMessage('Content is required'),
@@ -106,14 +115,29 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      if (!req.file) {
+      if (!req.files || !req.files.image) {
         return res.status(400).json({ message: 'Image is required' });
       }
 
-      const result = await cloudinary.uploader.upload(req.file.path, {
+      const imageFile = req.files.image[0];
+      const audioFile = req.files.audio ? req.files.audio[0] : null;
+
+      // Upload image to Cloudinary
+      const imageResult = await cloudinary.uploader.upload(imageFile.path, {
         folder: 'folktales',
       });
-      await fs.unlink(req.file.path); // Delete temporary file using promises
+      await fs.unlink(imageFile.path);
+
+      // Upload audio to Cloudinary if provided
+      let audioUrl = null;
+      if (audioFile) {
+        const audioResult = await cloudinary.uploader.upload(audioFile.path, {
+          folder: 'folktales_audio',
+          resource_type: 'video', // Cloudinary uses 'video' for audio files
+        });
+        audioUrl = audioResult.secure_url;
+        await fs.unlink(audioFile.path);
+      }
 
       const folktale = new Folktale({
         title: req.body.title,
@@ -121,13 +145,17 @@ router.post(
         region: req.body.region,
         genre: req.body.genre,
         ageGroup: req.body.ageGroup,
-        imageUrl: result.secure_url,
+        imageUrl: imageResult.secure_url,
+        audioUrl,
       });
 
       await folktale.save();
       res.status(201).json(folktale);
     } catch (error) {
       console.error('Error creating folktale:', error);
+      // Clean up any uploaded files in case of error
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
       res.status(500).json({ message: 'Server error' });
     }
   }
@@ -154,7 +182,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get popular folktales (specific path)
+// Get popular folktales
 router.get('/popular', async (req, res) => {
   try {
     const folktales = await Folktale.find().sort({ views: -1 }).limit(5);
@@ -165,7 +193,7 @@ router.get('/popular', async (req, res) => {
   }
 });
 
-// Get random folktale (specific path)
+// Get random folktale
 router.get('/random', async (req, res) => {
   try {
     const count = await Folktale.countDocuments();
@@ -178,19 +206,17 @@ router.get('/random', async (req, res) => {
   }
 });
 
-// Add a bookmark (specific path)
+// Add a bookmark
 router.post('/bookmarks', auth, async (req, res) => {
   try {
     const { folktaleId } = req.body;
     const userId = req.user.id;
 
-    // Validate folktale exists
     const folktale = await Folktale.findById(folktaleId);
     if (!folktale) {
       return res.status(404).json({ message: 'Folktale not found' });
     }
 
-    // Check for existing bookmark
     const existingBookmark = await Bookmark.findOne({ userId, folktaleId });
     if (existingBookmark) {
       return res.status(400).json({ message: 'Folktale already bookmarked' });
@@ -202,9 +228,8 @@ router.post('/bookmarks', auth, async (req, res) => {
     });
     await bookmark.save();
 
-    // Populate folktale data for response
     const populatedBookmark = await Bookmark.findById(bookmark._id)
-      .populate('folktaleId', 'title region genre imageUrl');
+      .populate('folktaleId', 'title region genre imageUrl audioUrl');
     res.status(201).json(populatedBookmark);
   } catch (error) {
     console.error('Error adding bookmark:', error);
@@ -212,11 +237,11 @@ router.post('/bookmarks', auth, async (req, res) => {
   }
 });
 
-// Get user's bookmarks (specific path, placed before /:id to avoid conflict)
+// Get user's bookmarks
 router.get('/bookmark', auth, async (req, res) => {
   try {
     const bookmarks = await Bookmark.find({ userId: req.user.id })
-      .populate('folktaleId', 'title region genre imageUrl');
+      .populate('folktaleId', 'title region genre imageUrl audioUrl');
     res.json(bookmarks);
   } catch (error) {
     console.error('Error fetching bookmarks:', error);
@@ -224,7 +249,7 @@ router.get('/bookmark', auth, async (req, res) => {
   }
 });
 
-// Remove a bookmark (specific path with parameter)
+// Remove a bookmark
 router.delete('/bookmarks/:folktaleId', auth, async (req, res) => {
   try {
     const bookmark = await Bookmark.findOneAndDelete({
@@ -241,11 +266,11 @@ router.delete('/bookmarks/:folktaleId', auth, async (req, res) => {
   }
 });
 
-// Update a folktale (dynamic route)
+// Update a folktale
 router.put(
   '/:id',
   auth,
-  upload.single('image'),
+  uploadFields,
   [
     body('title').notEmpty().withMessage('Title is required'),
     body('content').notEmpty().withMessage('Content is required'),
@@ -257,11 +282,15 @@ router.put(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
         return res.status(400).json({ errors: errors.array() });
       }
 
       const folktale = await Folktale.findById(req.params.id);
       if (!folktale) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
         return res.status(404).json({ message: 'Folktale not found' });
       }
 
@@ -273,24 +302,36 @@ router.put(
       folktale.ageGroup = req.body.ageGroup;
 
       // Update image if provided
-      if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
+      if (req.files?.image?.[0]) {
+        const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, {
           folder: 'folktales',
         });
-        await fs.unlink(req.file.path); // Delete temporary file using promises
-        folktale.imageUrl = result.secure_url;
+        await fs.unlink(req.files.image[0].path);
+        folktale.imageUrl = imageResult.secure_url;
+      }
+
+      // Update audio if provided
+      if (req.files?.audio?.[0]) {
+        const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
+          folder: 'folktales_audio',
+          resource_type: 'video',
+        });
+        await fs.unlink(req.files.audio[0].path);
+        folktale.audioUrl = audioResult.secure_url;
       }
 
       await folktale.save();
       res.json(folktale);
     } catch (error) {
       console.error('Error updating folktale:', error);
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
       res.status(500).json({ message: 'Server error' });
     }
   }
 );
 
-// Get folktale by ID (dynamic route)
+// Get folktale by ID
 router.get('/:id', async (req, res) => {
   try {
     const folktale = await Folktale.findById(req.params.id);
@@ -304,7 +345,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Rate folktale (dynamic route with subpath)
+// Rate folktale
 router.post(
   '/:id/rate',
   auth,
@@ -346,7 +387,7 @@ router.post(
   }
 );
 
-// Post comment (dynamic route with subpath)
+// Post comment
 router.post(
   '/:id/comments',
   auth,
@@ -394,7 +435,7 @@ router.post(
   }
 );
 
-// Get comments (dynamic route with subpath)
+// Get comments
 router.get('/:id/comments', async (req, res) => {
   try {
     const comments = await Comment.find({ folktaleId: req.params.id }).populate('userId', 'username');
@@ -405,7 +446,7 @@ router.get('/:id/comments', async (req, res) => {
   }
 });
 
-// Delete a folktale by ID (dynamic route, added for completeness)
+// Delete a folktale
 router.delete('/:id', auth, async (req, res) => {
   try {
     const folktale = await Folktale.findById(req.params.id);
