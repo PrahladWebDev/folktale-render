@@ -15,7 +15,9 @@ function AdminPanel() {
     ageGroup: '',
   });
   const [imageFile, setImageFile] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [audioPreview, setAudioPreview] = useState('');
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -74,6 +76,32 @@ function AdminPanel() {
     }
   };
 
+  const handleAudioChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const filetypes = /mp3/;
+      const maxSizeMB = 10;
+      if (!filetypes.test(file.type)) {
+        setError('Please upload an MP3 audio file.');
+        setAudioFile(null);
+        setAudioPreview('');
+        return;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        setError(`Audio size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+        setAudioFile(null);
+        setAudioPreview('');
+        return;
+      }
+      setAudioFile(file);
+      setAudioPreview(URL.createObjectURL(file));
+      setError('');
+    } else {
+      setAudioFile(null);
+      setAudioPreview('');
+    }
+  };
+
   const handleGenerateStory = async () => {
     if (!form.genre || !form.region || !form.ageGroup) {
       setError('Please select genre, region, and age group before generating a story.');
@@ -102,12 +130,10 @@ function AdminPanel() {
       );
 
       const generatedText = response.data.generatedText;
-      // Extract title and content
       const titleMatch = generatedText.match(/Title:\s*(.*?)\n/);
       let title = titleMatch ? titleMatch[1].trim() : '';
       const content = generatedText.replace(/Title:\s*.*?\n/, '').trim();
 
-      // If no title is provided, generate one from the content or use a fallback
       if (!title) {
         if (content) {
           const firstSentenceMatch = content.match(/^.*?[.!?]/);
@@ -125,7 +151,6 @@ function AdminPanel() {
         }
       }
 
-      // Always set the title and content, overriding any existing title
       setForm({
         ...form,
         title: title,
@@ -164,6 +189,9 @@ function AdminPanel() {
       if (imageFile) {
         formData.append('image', imageFile);
       }
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
 
       const config = {
         headers: {
@@ -193,7 +221,9 @@ function AdminPanel() {
 
       setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
       setImageFile(null);
+      setAudioFile(null);
       setImagePreview('');
+      setAudioPreview('');
       setUploadProgress(0);
       setLoading(false);
 
@@ -208,7 +238,7 @@ function AdminPanel() {
       console.error('Error saving Legend:', error);
       let errorMessage = 'Failed to save Legend.';
       if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-        errorMessage = 'Request timed out. Try uploading a smaller image or check server status.';
+        errorMessage = 'Request timed out. Try uploading smaller files or check server status.';
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
@@ -227,7 +257,9 @@ function AdminPanel() {
       ageGroup: folktale.ageGroup,
     });
     setImageFile(null);
+    setAudioFile(null);
     setImagePreview(folktale.imageUrl);
+    setAudioPreview(folktale.audioUrl || '');
     setEditId(folktale._id);
     setError('');
     setSuccess('');
@@ -248,7 +280,7 @@ function AdminPanel() {
         setLoading(false);
       } catch (error) {
         console.error('Error deleting Legend:', error);
-        setError('Failed to delete Legende.');
+        setError('Failed to delete Legend.');
         setLoading(false);
       }
     }
@@ -593,6 +625,27 @@ function AdminPanel() {
             )}
           </div>
 
+          <div className="flex flex-col">
+            <label className="mb-1 font-bold text-amber-900">Audio (Max 10MB, Optional)</label>
+            <input
+              type="file"
+              name="audio"
+              accept="audio/mp3"
+              onChange={handleAudioChange}
+              disabled={loading || generatingStory}
+              className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-amber-100 file:text-amber-900 file:font-semibold"
+            />
+            {audioPreview && (
+              <div className="mt-2">
+                <audio
+                  src={audioPreview}
+                  controls
+                  className="w-full rounded-md"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="col-span-1 md:col-span-2">
             <label className="mb-1 font-bold text-amber-900">Content</label>
             <ReactQuill
@@ -641,7 +694,9 @@ function AdminPanel() {
                 setEditId(null);
                 setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
                 setImageFile(null);
+                setAudioFile(null);
                 setImagePreview('');
+                setAudioPreview('');
                 setError('');
                 setSuccess('');
                 setUploadProgress(0);
@@ -688,6 +743,15 @@ function AdminPanel() {
                 alt={f.title}
                 className="w-36 h-24 object-cover rounded-md mt-2"
               />
+            )}
+            {f.audioUrl && (
+              <div className="mt-2">
+                <audio
+                  src={f.audioUrl}
+                  controls
+                  className="w-full rounded-md"
+                />
+              </div>
             )}
             <div className="flex gap-2 mt-2">
               <button
