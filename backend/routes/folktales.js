@@ -124,16 +124,13 @@ router.post(
       });
       await fs.unlink(req.files.image[0].path); // Delete temporary image file
 
-      // Upload audio to Cloudinary if provided
-      let audioUrl = null;
-      if (req.files?.audio) {
+      
         const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
           folder: 'folktales/audio',
           resource_type: 'video', // Cloudinary uses 'video' for audio files
         });
         await fs.unlink(req.files.audio[0].path); // Delete temporary audio file
-        audioUrl = audioResult.secure_url;
-      }
+      
 
       const folktale = new Folktale({
         title: req.body.title,
@@ -142,7 +139,7 @@ router.post(
         genre: req.body.genre,
         ageGroup: req.body.ageGroup,
         imageUrl: imageResult.secure_url,
-        audioUrl,
+        audioUrl: audioResult.secure_url,
       });
 
       await folktale.save();
