@@ -225,7 +225,7 @@ function FolktaleDetail() {
 
         <div className="my-10">
           <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-            The Story
+              {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'}       
           </h2>
           <div className="text-lg leading-relaxed">
             {token ? (
