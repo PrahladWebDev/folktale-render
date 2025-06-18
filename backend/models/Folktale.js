@@ -7,7 +7,6 @@ const folktaleSchema = new mongoose.Schema({
   genre: { type: String, required: true },
   ageGroup: { type: String, required: true },
   imageUrl: { type: String, required: true },
-  audioUrl: { type: String }, // New field for podcast audio URL
   views: { type: Number, default: 0 },
   ratings: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
