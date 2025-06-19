@@ -7,12 +7,12 @@ import { auth } from '../middleware/auth.js';
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
-  const { email, password, isAdmin } = req.body; // Allow isAdmin in registration (for testing)
+  const {username, email, password, isAdmin } = req.body; // Allow isAdmin in registration (for testing)
   try {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: 'User already exists' });
 
-    user = new User({ email, password: await bcrypt.hash(password, 10), isAdmin });
+    user = new User({username, email, password: await bcrypt.hash(password, 10), isAdmin });
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
