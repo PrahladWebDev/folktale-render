@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -8,6 +7,7 @@ function Register() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,13 +18,13 @@ function Register() {
     setError('');
     
     try {
-      const response = await axios.post('/api/auth/register', {
+      await axios.post('/api/auth/register', {
         username,
         email,
         password,
+        isAdmin,
       });
-      localStorage.setItem('token', response.data.token);
-      navigate('/');
+      navigate('/verify-otp', { state: { email } });
     } catch (error) {
       console.error('Register error:', error);
       setError(error.response?.data?.message || 'Registration failed. Please try again.');
@@ -56,7 +56,7 @@ function Register() {
         )}
 
         <form onSubmit={handleRegister} className="mb-6">
-            <div className="mb-6">
+          <div className="mb-6">
             <label className="block mb-2 font-semibold text-sm text-amber-900">
               Username
             </label>
@@ -78,19 +78,17 @@ function Register() {
               Email
             </label>
             <input
-              type="text"
-              placeholder="Choose a email"
+              type="email" // Changed to type="email" for proper validation
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              minLength="3"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Enter the correct email
+              Enter a valid email address
             </p>
           </div>
-
           <div className="mb-6">
             <label className="block mb-2 font-semibold text-sm text-amber-900">
               Password
@@ -108,7 +106,19 @@ function Register() {
               At least 6 characters
             </p>
           </div>
-
+          <div className="mb-6">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+                className="h-4 w-4 text-amber-600 border-amber-200 rounded focus:ring-amber-400"
+              />
+              <span className="ml-2 text-sm font-semibold text-amber-900">
+                Register as Admin
+              </span>
+            </label>
+          </div>
           <button
             type="submit"
             disabled={isLoading || !username || !email || !password}
