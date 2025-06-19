@@ -9,7 +9,7 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   const { email, password, isAdmin } = req.body; // Allow isAdmin in registration (for testing)
   try {
-    let user = await User.findOne({ username });
+    let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: 'User already exists' });
 
     user = new User({ email, password: await bcrypt.hash(password, 10), isAdmin });
