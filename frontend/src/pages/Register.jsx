@@ -60,7 +60,7 @@ function Register() {
             </label>
             <input
               type="text"
-              placeholder="Choose a username"
+              placeholder="Choose a email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -68,7 +68,7 @@ function Register() {
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
             />
             <p className="mt-1 text-xs text-gray-500">
-              At least 3 characters
+              Enter the correct email
             </p>
           </div>
 
