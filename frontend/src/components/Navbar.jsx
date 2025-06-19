@@ -8,7 +8,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [email, setEmail] = useState(null); // State for username
+  const [username, setUsername] = useState(null); // State for username
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ function Navbar() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsAdmin(response.data.isAdmin);
-          setUsername(response.data.email); // Set username from response
+          setUsername(response.data.username); // Set username from response
         } catch (error) {
           console.error("Error checking user:", error);
         }
