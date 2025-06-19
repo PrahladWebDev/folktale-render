@@ -67,7 +67,7 @@ function Navbar() {
           {email && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <FaUser />
-              <span className="truncate max-w-[150px]">{email}</span>
+              <span className="truncate max-w-[150px]">{username}</span>
             </div>
           )}
         </div>
