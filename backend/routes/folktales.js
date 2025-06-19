@@ -431,7 +431,7 @@ router.post(
         content,
       });
       await comment.save();
-      const populatedComment = await Comment.findById(comment._id).populate('userId', 'email');
+      const populatedComment = await Comment.findById(comment._id).populate('userId', 'username');
       res.status(201).json(populatedComment);
     } catch (error) {
       console.error('Error posting comment:', error);
@@ -442,7 +442,7 @@ router.post(
 
 router.get('/:id/comments', async (req, res) => {
   try {
-    const comments = await Comment.find({ folktaleId: req.params.id }).populate('userId', 'email');
+    const comments = await Comment.find({ folktaleId: req.params.id }).populate('userId', 'username');
     res.json(comments);
   } catch (error) {
     console.error('Error fetching comments:', error);
