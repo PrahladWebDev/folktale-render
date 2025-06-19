@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import FolktaleDetail from "./pages/FolktaleDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyOTP from './components/VerifyOTP';
 import AdminPanel from "./pages/AdminPanel";
 import Navbar from "./components/Navbar";
 import MapFolktaleExplorer from "./components/MapFilter";
@@ -19,6 +20,7 @@ function App() {
         <Route path="/folktale/:id" element={<FolktaleDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/admin" element={<AdminPanel />} />
       </Routes>
     </Router>
