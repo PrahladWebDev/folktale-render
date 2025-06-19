@@ -62,7 +62,7 @@ function Login() {
               type="text"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 placeholder-gray-400"
             />
