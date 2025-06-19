@@ -5,7 +5,7 @@ import axios from 'axios';
 import SearchBar from '../components/SearchBar';
 
 function Register() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +18,7 @@ function Register() {
     
     try {
       const response = await axios.post('/api/auth/register', {
-        username,
+        email,
         password,
       });
       localStorage.setItem('token', response.data.token);
@@ -56,13 +56,13 @@ function Register() {
         <form onSubmit={handleRegister} className="mb-6">
           <div className="mb-6">
             <label className="block mb-2 font-semibold text-sm text-amber-900">
-              Username
+              Email
             </label>
             <input
               type="text"
               placeholder="Choose a username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               minLength="3"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
