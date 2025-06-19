@@ -7,21 +7,21 @@ import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
-// Generate OTP
+// Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// Nodemailer setup with SMTP
+// Setup Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: 'mail.webdevprahlad.site',
   port: 465,
-  secure: true, // SSL for port 465
+  secure: true, // true for SSL (port 465)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-// Check if transporter is ready
+// Verify transporter
 transporter.verify((error, success) => {
   if (error) {
     console.error('❌ SMTP Transporter Error:', error);
@@ -30,7 +30,7 @@ transporter.verify((error, success) => {
   }
 });
 
-// Debug log environment vars (only during development)
+// Debug (only for development)
 console.log('📧 Email Config:', {
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASS: process.env.EMAIL_PASS ? '******' : 'NOT SET',
@@ -38,7 +38,7 @@ console.log('📧 Email Config:', {
 
 // ================== ROUTES ==================
 
-// Register
+// Register Route
 router.post('/register', async (req, res) => {
   const { username, email, password, isAdmin } = req.body;
 
@@ -61,13 +61,32 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
+    // Styled HTML email
     const mailOptions = {
       from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Your OTP for Verification',
-      text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+          <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
+          <p style="font-size: 16px; color: #555;">
+            Thank you for registering. Please use the OTP below to verify your email address. This OTP is valid for <strong>10 minutes</strong>.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #888;">
+            If you didn’t request this, you can ignore this email.
+          </p>
+          <hr style="margin-top: 40px;">
+          <p style="font-size: 12px; color: #aaa; text-align: center;">
+            &copy; ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+          </p>
+        </div>
+      `,
     };
 
+    // Send email
     transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
         console.error('❌ Email Send Error:', err);
@@ -126,7 +145,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get user profile
+// Get Profile
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('username email isAdmin');
