@@ -64,7 +64,7 @@ function Navbar() {
         {/* Search Bar and Username for Desktop */}
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
-          {email && (
+          {username && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <FaUser />
               <span className="truncate max-w-[150px]">{username}</span>
