@@ -5,49 +5,80 @@ import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 import nodemailer from 'nodemailer';
 
+const router = express.Router();
+
 // Generate OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// Nodemailer setup with custom SMTP server
+// Nodemailer setup with SMTP
 const transporter = nodemailer.createTransport({
   host: 'mail.webdevprahlad.site',
   port: 465,
-  secure: true, // Use SSL for port 465
+  secure: true, // SSL for port 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-const router = express.Router();
+// Check if transporter is ready
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ SMTP Transporter Error:', error);
+  } else {
+    console.log('✅ SMTP Transporter is ready to send emails');
+  }
+});
+
+// Debug log environment vars (only during development)
+console.log('📧 Email Config:', {
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASS: process.env.EMAIL_PASS ? '******' : 'NOT SET',
+});
+
+// ================== ROUTES ==================
 
 // Register
 router.post('/register', async (req, res) => {
   const { username, email, password, isAdmin } = req.body;
+
   try {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: 'User already exists' });
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generateOTP();
+
     user = new User({
       username,
       email,
-      password: await bcrypt.hash(password, 10),
-      isAdmin: isAdmin || false, // Default to false if not provided
+      password: hashedPassword,
+      isAdmin: isAdmin || false,
       isVerified: false,
+      otp,
+      otpExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
-    const otp = generateOTP();
-    user.otp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
     await user.save();
 
-    await transporter.sendMail({
+    const mailOptions = {
+      from: `"WebDev Prahlad" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Your OTP for Verification',
-      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-    });
+      text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
+    };
 
-    res.status(201).json({ message: 'OTP sent to email' });
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.error('❌ Email Send Error:', err);
+        return res.status(500).json({ message: 'Failed to send OTP email', error: err.message });
+      } else {
+        console.log('✅ Email sent:', info.response);
+        return res.status(201).json({ message: 'OTP sent to email' });
+      }
+    });
   } catch (error) {
+    console.error('❌ Register Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -58,6 +89,7 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'User not found' });
+
     if (user.otp !== otp || user.otpExpires < Date.now()) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
@@ -70,6 +102,7 @@ router.post('/verify-otp', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, message: 'Email verified successfully' });
   } catch (error) {
+    console.error('❌ OTP Verification Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -79,7 +112,8 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user || !user.isVerified) return res.status(400).json({ message: 'Invalid credentials or email not verified' });
+    if (!user || !user.isVerified)
+      return res.status(400).json({ message: 'Invalid credentials or email not verified' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
@@ -87,6 +121,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
   } catch (error) {
+    console.error('❌ Login Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -97,6 +132,7 @@ router.get('/me', auth, async (req, res) => {
     const user = await User.findById(req.user.id).select('username email isAdmin');
     res.json(user);
   } catch (error) {
+    console.error('❌ Profile Fetch Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
