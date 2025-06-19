@@ -6,6 +6,7 @@ import SearchBar from '../components/SearchBar';
 
 function Register() {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,6 +19,7 @@ function Register() {
     
     try {
       const response = await axios.post('/api/auth/register', {
+        username,
         email,
         password,
       });
@@ -54,6 +56,23 @@ function Register() {
         )}
 
         <form onSubmit={handleRegister} className="mb-6">
+            <div className="mb-6">
+            <label className="block mb-2 font-semibold text-sm text-amber-900">
+              Username
+            </label>
+            <input
+              type="text"
+              placeholder="Choose a username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              minLength="3"
+              className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              At least 3 characters
+            </p>
+          </div>
           <div className="mb-6">
             <label className="block mb-2 font-semibold text-sm text-amber-900">
               Email
@@ -92,7 +111,7 @@ function Register() {
 
           <button
             type="submit"
-            disabled={isLoading || !email || !password}
+            disabled={isLoading || !username || !email || !password}
             className="w-full bg-amber-600 text-white p-3 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Creating account...' : 'Register'}
