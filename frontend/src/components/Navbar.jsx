@@ -8,7 +8,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [username, setUsername] = useState(null); // State for username
+  const [email, setEmail] = useState(null); // State for username
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ function Navbar() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsAdmin(response.data.isAdmin);
-          setUsername(response.data.username); // Set username from response
+          setUsername(response.data.email); // Set username from response
         } catch (error) {
           console.error("Error checking user:", error);
         }
@@ -64,10 +64,10 @@ function Navbar() {
         {/* Search Bar and Username for Desktop */}
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
-          {username && (
+          {email && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <FaUser />
-              <span className="truncate max-w-[150px]">{username}</span>
+              <span className="truncate max-w-[150px]">{email}</span>
             </div>
           )}
         </div>
