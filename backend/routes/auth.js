@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
     user = new User({
       username,
       email,
-      password,
+      password: await bcrypt.hash(password, 10),
       isAdmin: isAdmin || false, // Default to false if not provided
       isVerified: false,
     });
