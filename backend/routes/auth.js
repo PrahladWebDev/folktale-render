@@ -7,12 +7,12 @@ import { auth } from '../middleware/auth.js';
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
-  const { username, password, isAdmin } = req.body; // Allow isAdmin in registration (for testing)
+  const { email, password, isAdmin } = req.body; // Allow isAdmin in registration (for testing)
   try {
     let user = await User.findOne({ username });
     if (user) return res.status(400).json({ message: 'User already exists' });
 
-    user = new User({ username, password: await bcrypt.hash(password, 10), isAdmin });
+    user = new User({ email, password: await bcrypt.hash(password, 10), isAdmin });
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -23,9 +23,9 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   try {
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
 
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('username isAdmin');
+    const user = await User.findById(req.user.id).select('email isAdmin');
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
