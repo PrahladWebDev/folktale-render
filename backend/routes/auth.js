@@ -62,7 +62,7 @@ router.post('/register', async (req, res) => {
     await user.save();
 
     const mailOptions = {
-      from: `"WebDev Prahlad" <${process.env.EMAIL_USER}>`,
+      from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Your OTP for Verification',
       text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
