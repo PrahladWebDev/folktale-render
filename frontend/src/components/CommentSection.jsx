@@ -83,7 +83,7 @@ function CommentSection({ folktaleId }) {
               className="bg-white rounded-md p-4 mb-4 shadow-sm border-2 border-amber-200 animate-fadeIn"
             >
               <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-                <span className="font-bold text-amber-900">{comment.userId.email}</span>
+                <span className="font-bold text-amber-900">{comment.userId.username}</span>
                 <span className="text-sm text-gray-600">
                   {new Date(comment.timestamp).toLocaleString('en-US', {
                     year: 'numeric',
