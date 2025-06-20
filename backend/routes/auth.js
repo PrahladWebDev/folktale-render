@@ -80,7 +80,7 @@ router.post('/register', async (req, res) => {
           </p>
           <hr style="margin-top: 40px;">
           <p style="font-size: 12px; color: #aaa; text-align: center;">
-            &copy; ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+            © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
           </p>
         </div>
       `,
@@ -122,6 +122,80 @@ router.post('/verify-otp', async (req, res) => {
     res.json({ token, message: 'Email verified successfully' });
   } catch (error) {
     console.error('❌ OTP Verification Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Forgot Password
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+    if (!user.isVerified) return res.status(400).json({ message: 'Email not verified' });
+
+    const otp = generateOTP();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    const mailOptions = {
+      from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Password Reset OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+          <h2 style="color: #333;">🔒 Password Reset Request</h2>
+          <p style="font-size: 16px; color: #555;">
+            You requested a password reset. Please use the OTP below to reset your password. This OTP is valid for <strong>10 minutes</strong>.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #888;">
+            If you didn’t request this, you can ignore this email.
+          </p>
+          <hr style="margin-top: 40px;">
+          <p style="font-size: 12px; color: #aaa; text-align: center;">
+            © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+          </p>
+        </div>
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.error('❌ Email Send Error:', err);
+        return res.status(500).json({ message: 'Failed to send OTP email', error: err.message });
+      }
+      console.log('✅ Email sent:', info.response);
+      return res.status(200).json({ message: 'OTP sent to email' });
+    });
+  } catch (error) {
+    console.error('❌ Forgot Password Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('❌ Reset Password Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
