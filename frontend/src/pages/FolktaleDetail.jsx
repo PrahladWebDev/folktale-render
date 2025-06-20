@@ -5,12 +5,14 @@ import CommentSection from '../components/CommentSection';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
+import { FaStar } from 'react-icons/fa';
 
 function FolktaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [folktale, setFolktale] = useState(null);
-  const [rating, setRating] = useState(1);
+  const [rating, setRating] = useState(0); // Changed to 0 as initial state for stars
+  const [hoverRating, setHoverRating] = useState(0); // Track hover state for stars
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -72,6 +74,11 @@ function FolktaleDetail() {
     if (!token) {
       toast.warning('Please log in to rate this folktale.');
       setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+
+    if (rating === 0) {
+      toast.warning('Please select a rating before submitting.');
       return;
     }
 
@@ -281,15 +288,19 @@ function FolktaleDetail() {
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
             <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
             <div className="flex gap-4 items-center flex-wrap">
-              <select
-                value={rating}
-                onChange={(e) => setRating(parseInt(e.target.value))}
-                className="p-2 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
-              >
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <option key={num} value={num}>{num} Star{num > 1 ? 's' : ''}</option>
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    className={`text-2xl cursor-pointer transition-colors duration-200 ${
+                      star <= (hoverRating || rating) ? 'text-amber-600' : 'text-gray-300'
+                    }`}
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                  />
                 ))}
-              </select>
+              </div>
               <button
                 onClick={handleRate}
                 className="bg-amber-600 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
