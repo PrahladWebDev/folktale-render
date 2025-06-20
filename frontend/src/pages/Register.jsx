@@ -16,15 +16,39 @@ function Register() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
+    // Normalize inputs: trim spaces and convert email/username to lowercase
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    // Validate inputs
+    if (!normalizedEmail || !normalizedUsername || !normalizedPassword) {
+      setError('All fields are required');
+      setIsLoading(false);
+      return;
+    }
+
+    if (normalizedUsername.length < 3) {
+      setError('Username must be at least 3 characters');
+      setIsLoading(false);
+      return;
+    }
+
+    if (normalizedPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await axios.post('/api/auth/register', {
-        username,
-        email,
-        password,
+        username: normalizedUsername,
+        email: normalizedEmail,
+        password: normalizedPassword,
         isAdmin,
       });
-      navigate('/verify-otp', { state: { email } });
+      navigate('/verify-otp', { state: { email: normalizedEmail } });
     } catch (error) {
       console.error('Register error:', error);
       setError(error.response?.data?.message || 'Registration failed. Please try again.');
@@ -41,7 +65,7 @@ function Register() {
       
       <div className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-6 sm:p-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulseSketchy">
+          <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulse">
             Join Legend Sansar
           </h2>
           <p className="text-gray-600 text-base">
@@ -78,7 +102,7 @@ function Register() {
               Email
             </label>
             <input
-              type="email" // Changed to type="email" for proper validation
+              type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -121,7 +145,7 @@ function Register() {
           </div>
           <button
             type="submit"
-            disabled={isLoading || !username || !email || !password}
+            disabled={isLoading}
             className="w-full bg-amber-600 text-white p-3 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Creating account...' : 'Register'}
