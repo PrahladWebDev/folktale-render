@@ -14,7 +14,7 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 const transporter = nodemailer.createTransport({
   host: 'mail.webdevprahlad.site',
   port: 465,
-  secure: true, // true for SSL (port 465)
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -56,12 +56,11 @@ router.post('/register', async (req, res) => {
       isAdmin: isAdmin || false,
       isVerified: false,
       otp,
-      otpExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
+      otpExpires: Date.now() + 10 * 60 * 1000,
     });
 
     await user.save();
 
-    // Styled HTML email
     const mailOptions = {
       from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -86,7 +85,6 @@ router.post('/register', async (req, res) => {
       `,
     };
 
-    // Send email
     transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
         console.error('❌ Email Send Error:', err);
@@ -136,7 +134,7 @@ router.post('/forgot-password', async (req, res) => {
 
     const otp = generateOTP();
     user.otp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
     const mailOptions = {
@@ -196,6 +194,33 @@ router.post('/reset-password', async (req, res) => {
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('❌ Reset Password Error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update Profile
+router.put('/update-profile', auth, async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    if (username) {
+      const existingUser = await User.findOne({ username });
+      if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+        return res.status(400).json({ message: 'Username already taken' });
+      }
+      user.username = username;
+    }
+
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+    res.json({ message: 'Profile updated successfully', username: user.username });
+  } catch (error) {
+    console.error('❌ Update Profile Error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
