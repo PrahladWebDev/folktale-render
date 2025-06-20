@@ -4,6 +4,10 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 import nodemailer from 'nodemailer';
+import cloudinary from '../config/cloudinary.js';
+import multer from 'multer';
+import fs from 'fs/promises';
+import path from 'path';
 
 const router = express.Router();
 
@@ -36,18 +40,70 @@ console.log('📧 Email Config:', {
   EMAIL_PASS: process.env.EMAIL_PASS ? '******' : 'NOT SET',
 });
 
+// Multer setup for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, '/tmp');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = /image\/(jpeg|jpg|png)/.test(file.mimetype);
+    console.log('File validation:', { 
+      name: file.originalname, 
+      mimetype: file.mimetype, 
+      extname: path.extname(file.originalname).toLowerCase(),
+      valid: extname && mimetype 
+    });
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Images (jpeg, jpg, png) only'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for profile images
+  },
+});
+
 // ================== ROUTES ==================
 
 // Register Route
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('profileImage'), async (req, res) => {
   const { username, email, password, isAdmin } = req.body;
 
   try {
     let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: 'User already exists' });
+    if (user) {
+      if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
+    let profileImageUrl = null;
+
+    if (req.file) {
+      try {
+        const imageResult = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'user_profiles',
+        });
+        console.log('Profile image uploaded:', imageResult.secure_url);
+        profileImageUrl = imageResult.secure_url;
+        await fs.unlink(req.file.path).catch(() => {});
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload error:', cloudinaryError);
+        if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
+        return res.status(500).json({ message: 'Failed to upload profile image' });
+      }
+    }
 
     user = new User({
       username,
@@ -57,6 +113,7 @@ router.post('/register', async (req, res) => {
       isVerified: false,
       otp,
       otpExpires: Date.now() + 10 * 60 * 1000,
+      profileImageUrl,
     });
 
     await user.save();
@@ -96,6 +153,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Register Error:', error);
+    if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -199,15 +257,19 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // Update Profile
-router.put('/update-profile', auth, async (req, res) => {
+router.put('/update-profile', auth, upload.single('profileImage'), async (req, res) => {
   const { username, password } = req.body;
   try {
     const user = await User.findById(req.user.id);
-    if (!user) return res.status(400).json({ message: 'User not found' });
+    if (!user) {
+      if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({ message: 'User not found' });
+    }
 
     if (username) {
       const existingUser = await User.findOne({ username });
       if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+        if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
         return res.status(400).json({ message: 'Username already taken' });
       }
       user.username = username;
@@ -217,10 +279,26 @@ router.put('/update-profile', auth, async (req, res) => {
       user.password = await bcrypt.hash(password, 10);
     }
 
+    if (req.file) {
+      try {
+        const imageResult = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'user_profiles',
+        });
+        console.log('Profile image uploaded:', imageResult.secure_url);
+        user.profileImageUrl = imageResult.secure_url;
+        await fs.unlink(req.file.path).catch(() => {});
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload error:', cloudinaryError);
+        if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
+        return res.status(500).json({ message: 'Failed to upload profile image' });
+      }
+    }
+
     await user.save();
-    res.json({ message: 'Profile updated successfully', username: user.username });
+    res.json({ message: 'Profile updated successfully', username: user.username, profileImageUrl: user.profileImageUrl });
   } catch (error) {
     console.error('❌ Update Profile Error:', error);
+    if (req.file?.path) await fs.unlink(req.file.path).catch(() => {});
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -247,7 +325,7 @@ router.post('/login', async (req, res) => {
 // Get Profile
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('username email isAdmin');
+    const user = await User.findById(req.user.id).select('username email isAdmin profileImageUrl');
     res.json(user);
   } catch (error) {
     console.error('❌ Profile Fetch Error:', error);
