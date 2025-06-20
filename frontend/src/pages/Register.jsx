@@ -11,12 +11,14 @@ function Register() {
   const [profileImage, setProfileImage] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setUploadProgress(0);
 
     // Normalize inputs: trim spaces and convert email/username to lowercase
     const normalizedEmail = email.trim().toLowerCase();
@@ -71,6 +73,10 @@ function Register() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
       });
       navigate('/verify-otp', { state: { email: normalizedEmail } });
     } catch (error) {
@@ -78,6 +84,7 @@ function Register() {
       setError(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -112,6 +119,7 @@ function Register() {
               required
               minLength="3"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
+              disabled={isLoading}
             />
             <p className="mt-1 text-xs text-gray-500">
               At least 3 characters
@@ -128,6 +136,7 @@ function Register() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
+              disabled={isLoading}
             />
             <p className="mt-1 text-xs text-gray-500">
               Enter a valid email address
@@ -145,6 +154,7 @@ function Register() {
               required
               minLength="6"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
+              disabled={isLoading}
             />
             <p className="mt-1 text-xs text-gray-500">
               At least 6 characters
@@ -159,11 +169,25 @@ function Register() {
               accept="image/jpeg,image/jpg,image/png"
               onChange={(e) => setProfileImage(e.target.files[0])}
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
+              disabled={isLoading}
             />
             <p className="mt-1 text-xs text-gray-500">
               JPEG, JPG, or PNG (max 5MB)
             </p>
           </div>
+          {isLoading && uploadProgress > 0 && (
+            <div className="mb-6">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-amber-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 mt-1 text-center">
+                Uploading: {uploadProgress}%
+              </p>
+            </div>
+          )}
           <div className="mb-6">
             <label className="flex items-center">
               <input
@@ -171,6 +195,7 @@ function Register() {
                 checked={isAdmin}
                 onChange={(e) => setIsAdmin(e.target.checked)}
                 className="h-4 w-4 text-amber-600 border-amber-200 rounded focus:ring-amber-400"
+                disabled={isLoading}
               />
               <span className="ml-2 text-sm font-semibold text-amber-900">
                 Register as Admin
