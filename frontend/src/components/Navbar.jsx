@@ -190,18 +190,7 @@ function Navbar() {
                   Admin Panel
                 </button>
               )}
-              <button
-                className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
-                onClick={() => {
-                  navigate("/profile");
-                  setIsMenuOpen(false);
-                }}
-                title="Profile"
-              >
-                <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200">
-                  <FaUser size={16} />
-                </div>
-              </button>
+            
               <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={handleLogout}
