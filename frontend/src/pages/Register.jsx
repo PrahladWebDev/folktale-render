@@ -8,6 +8,7 @@ function Register() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -41,12 +42,35 @@ function Register() {
       return;
     }
 
+    // Validate image
+    if (profileImage) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(profileImage.type)) {
+        setError('Please upload a valid image (JPEG, JPG, or PNG)');
+        setIsLoading(false);
+        return;
+      }
+      if (profileImage.size > 5 * 1024 * 1024) {
+        setError('Image size must not exceed 5MB');
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
-      await axios.post('/api/auth/register', {
-        username: normalizedUsername,
-        email: normalizedEmail,
-        password: normalizedPassword,
-        isAdmin,
+      const formData = new FormData();
+      formData.append('username', normalizedUsername);
+      formData.append('email', normalizedEmail);
+      formData.append('password', normalizedPassword);
+      formData.append('isAdmin', isAdmin);
+      if (profileImage) {
+        formData.append('profileImage', profileImage);
+      }
+
+      await axios.post('/api/auth/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       navigate('/verify-otp', { state: { email: normalizedEmail } });
     } catch (error) {
@@ -59,10 +83,6 @@ function Register() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-amber-50 p-4 font-caveat text-gray-800 animate-fadeIn">
-      {/* <div className="w-full max-w-7xl mb-8">
-        <SearchBar />
-      </div> */}
-      
       <div className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-6 sm:p-10 w-full max-w-md">
         <div className="text-center mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulse">
@@ -79,7 +99,7 @@ function Register() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="mb-6">
+        <form onSubmit={handleRegister} className="mb-6" encType="multipart/form-data">
           <div className="mb-6">
             <label className="block mb-2 font-semibold text-sm text-amber-900">
               Username
@@ -128,6 +148,20 @@ function Register() {
             />
             <p className="mt-1 text-xs text-gray-500">
               At least 6 characters
+            </p>
+          </div>
+          <div className="mb-6">
+            <label className="block mb-2 font-semibold text-sm text-amber-900">
+              Profile Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png"
+              onChange={(e) => setProfileImage(e.target.files[0])}
+              className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              JPEG, JPG, or PNG (max 5MB)
             </p>
           </div>
           <div className="mb-6">
