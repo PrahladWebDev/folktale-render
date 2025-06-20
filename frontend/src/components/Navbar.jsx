@@ -1,4 +1,3 @@
-ararnge the nvbar liks structurally aligns and show profile icon on extream right
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
