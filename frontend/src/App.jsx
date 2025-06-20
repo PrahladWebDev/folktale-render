@@ -10,6 +10,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Navbar from "./components/Navbar";
 import MapFolktaleExplorer from "./components/MapFilter";
 import BookmarkedFolktale from "./pages/BookmarkedFolktale";
+import Profile from './components/Profile';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );
