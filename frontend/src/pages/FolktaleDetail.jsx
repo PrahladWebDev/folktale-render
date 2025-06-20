@@ -131,6 +131,15 @@ function FolktaleDetail() {
     }
   };
 
+  const handleAudioPlay = () => {
+    if (!token) {
+      toast.warning('Please log in to listen to the podcast.');
+      setTimeout(() => navigate('/login'), 2000);
+      return false;
+    }
+    return true;
+  };
+
   if (isLoading) {
     return (
       <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulseSketchy">
@@ -210,10 +219,25 @@ function FolktaleDetail() {
         {folktale.audioUrl && (
           <div className="max-w-3xl mx-auto mb-8 p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
             <h2 className="text-xl sm:text-2xl font-bold text-amber-900 mb-4">Listen to the Podcast</h2>
-            <audio controls className="w-full">
-              <source src={folktale.audioUrl} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
+            {token ? (
+              <audio controls className="w-full" onPlay={handleAudioPlay}>
+                <source src={folktale.audioUrl} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            ) : (
+              <div className="text-center">
+                <p className="text-lg text-gray-600 mb-4 font-semibold">Please log in to listen to the podcast.</p>
+                <button
+                  className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                  onClick={() => {
+                    toast.warning('Please log in to listen to the podcast.');
+                    setTimeout(() => navigate('/login'), 2000);
+                  }}
+                >
+                  Log in or Register
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -225,7 +249,7 @@ function FolktaleDetail() {
 
         <div className="my-10">
           <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-              {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'}       
+            {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'}
           </h2>
           <div className="text-lg leading-relaxed">
             {token ? (
