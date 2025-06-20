@@ -72,7 +72,6 @@ function Navbar() {
                 <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200">
                   <FaUser size={16} />
                 </div>
-                <span className="truncate max-w-[150px]">{username}</span>
               </button>
             </div>
           )}
@@ -150,7 +149,6 @@ function Navbar() {
                   <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200">
                     <FaUser size={16} />
                   </div>
-                  <span className="truncate max-w-[200px]">{username}</span>
                 </button>
               </div>
             )}
