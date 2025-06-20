@@ -8,29 +8,32 @@ function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [username, setUsername] = useState(null);
+  const [user, setUser] = useState({ username: null, profileImageUrl: "" });
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkUser = async () => {
       if (token) {
         try {
           const response = await axios.get("/api/auth/me", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsAdmin(response.data.isAdmin);
-          setUsername(response.data.username);
+          setUser({
+            username: response.data.username,
+            profileImageUrl: response.data.profileImageUrl || "",
+          });
         } catch (error) {
           console.error("Error checking user:", error);
         }
       }
     };
-    checkAdmin();
+    checkUser();
   }, [token]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setUsername(null);
+    setUser({ username: null, profileImageUrl: "" });
     navigate("/login");
     setIsMenuOpen(false);
   };
@@ -38,6 +41,20 @@ function Navbar() {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  const renderProfileIcon = () => (
+    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200 overflow-hidden">
+      {user.profileImageUrl ? (
+        <img
+          src={user.profileImageUrl}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <FaUser size={16} />
+      )}
+    </div>
+  );
 
   return (
     <nav className="bg-gradient-to-r from-amber-50 to-orange-100 shadow-md p-3 sticky top-0 z-[1000] font-caveat text-gray-800 animate-fadeIn">
@@ -62,16 +79,14 @@ function Navbar() {
 
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
-          {username && (
+          {user.username && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <button
                 className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
                 onClick={() => navigate("/profile")}
                 title="Profile"
               >
-                <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200">
-                  <FaUser size={16} />
-                </div>
+                {renderProfileIcon()}
               </button>
             </div>
           )}
@@ -137,7 +152,7 @@ function Navbar() {
         <div className="flex flex-col gap-3 pt-4">
           <div className="px-4 flex flex-col gap-3">
             <SearchBar />
-            {username && (
+            {user.username && (
               <div className="flex items-center gap-2 text-amber-900 font-semibold">
                 <button
                   className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
@@ -146,9 +161,7 @@ function Navbar() {
                     setIsMenuOpen(false);
                   }}
                 >
-                  <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200">
-                    <FaUser size={16} />
-                  </div>
+                  {renderProfileIcon()}
                 </button>
               </div>
             )}
@@ -188,7 +201,6 @@ function Navbar() {
                   Admin Panel
                 </button>
               )}
-            
               <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={handleLogout}
