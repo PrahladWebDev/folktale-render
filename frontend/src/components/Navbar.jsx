@@ -8,7 +8,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [username, setUsername] = useState(null); // State for username
+  const [username, setUsername] = useState(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ function Navbar() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsAdmin(response.data.isAdmin);
-          setUsername(response.data.username); // Set username from response
+          setUsername(response.data.username);
         } catch (error) {
           console.error("Error checking user:", error);
         }
@@ -30,7 +30,7 @@ function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setUsername(null); // Clear username on logout
+    setUsername(null);
     navigate("/login");
     setIsMenuOpen(false);
   };
@@ -52,7 +52,6 @@ function Navbar() {
           Legend संसार
         </h1>
 
-        {/* Hamburger Icon for Mobile */}
         <button
           className="md:hidden text-amber-900 focus:outline-none"
           onClick={toggleMenu}
@@ -61,18 +60,22 @@ function Navbar() {
           {isMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
 
-        {/* Search Bar and Username for Desktop */}
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
           {username && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
-              <FaUser />
-              <span className="truncate max-w-[150px]">{username}</span>
+              <button
+                className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
+                onClick={() => navigate("/profile")}
+                title="Profile"
+              >
+                <FaUser />
+                <span className="truncate max-w-[150px]">{username}</span>
+              </button>
             </div>
           )}
         </div>
 
-        {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-3">
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
@@ -100,6 +103,13 @@ function Navbar() {
                 </button>
               )}
               <button
+                className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                onClick={() => navigate("/profile")}
+                title="Profile"
+              >
+                <FaUser />
+              </button>
+              <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                 onClick={handleLogout}
               >
@@ -125,20 +135,26 @@ function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="flex flex-col gap-3 pt-4">
-          {/* Search Bar and Username for Mobile */}
           <div className="px-4 flex flex-col gap-3">
             <SearchBar />
             {username && (
               <div className="flex items-center gap-2 text-amber-900 font-semibold">
-                <FaUser />
-                <span className="truncate max-w-[200px]">{username}</span>
+                <button
+                  className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
+                  onClick={() => {
+                    navigate("/profile");
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <FaUser />
+                  <span className="truncate max-w-[200px]">{username}</span>
+                </button>
               </div>
             )}
           </div>
@@ -162,7 +178,7 @@ function Navbar() {
             title="Bookmarks"
           >
             <FaBookmark />
-        </button>
+          </button>
 
           {token ? (
             <>
@@ -177,6 +193,16 @@ function Navbar() {
                   Admin Panel
                 </button>
               )}
+              <button
+                className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
+                onClick={() => {
+                  navigate("/profile");
+                  setIsMenuOpen(false);
+                }}
+                title="Profile"
+              >
+                <FaUser />
+              </button>
               <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={handleLogout}
