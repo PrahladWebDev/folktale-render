@@ -234,7 +234,7 @@ router.post('/bookmarks', auth, async (req, res) => {
     await bookmark.save();
 
     const populatedBookmark = await Bookmark.findById(bookmark._id)
-      .populate('folktaleId', 'title region genre imageUrl audioUrl');
+      .populate('folktaleId', 'title region genre imageUrl audioUrl ageGroup');
     res.status(201).json(populatedBookmark);
   } catch (error) {
     console.error('Error adding bookmark:', error);
@@ -245,7 +245,7 @@ router.post('/bookmarks', auth, async (req, res) => {
 router.get('/bookmark', auth, async (req, res) => {
   try {
     const bookmarks = await Bookmark.find({ userId: req.user.id })
-      .populate('folktaleId', 'title region genre imageUrl audioUrl');
+      .populate('folktaleId', 'title region genre imageUrl audioUrl ageGroup');
     res.json(bookmarks);
   } catch (error) {
     console.error('Error fetching bookmarks:', error);
