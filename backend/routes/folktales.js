@@ -1,4 +1,3 @@
-
 import express from 'express';
 import Folktale from '../models/Folktale.js';
 import Comment from '../models/Comment.js';
@@ -11,40 +10,9 @@ import axios from 'axios';
 import path from 'path';
 import dotenv from 'dotenv';
 import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 dotenv.config();
-
-// Ensure /tmp/chunks directory exists
-const ensureChunksDir = async () => {
-  try {
-    await fs.mkdir('/tmp/chunks', { recursive: true });
-  } catch (error) {
-    console.error('Error creating /tmp/chunks directory:', error);
-  }
-};
-
-// Clean up stale chunks older than 1 hour
-const cleanupStaleChunks = async () => {
-  try {
-    const files = await fs.readdir('/tmp/chunks');
-    const now = Date.now();
-    for (const file of files) {
-      const filePath = path.join('/tmp/chunks', file);
-      const stats = await fs.stat(filePath);
-      if (now - stats.mtimeMs > 60 * 60 * 1000) { // 1 hour
-        await fs.unlink(filePath);
-      }
-    }
-  } catch (error) {
-    console.error('Error cleaning up stale chunks:', error);
-  }
-};
-
-// Run directory setup and cleanup on server start
-ensureChunksDir();
-setInterval(cleanupStaleChunks, 60 * 60 * 1000); // Run hourly
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -66,7 +34,7 @@ const upload = multer({
       mimetype: file.mimetype, 
       extname: path.extname(file.originalname).toLowerCase(),
       valid: extname && mimetype 
-    });
+    }); // Debug log
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -74,268 +42,15 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 1024 * 1024 * 1024, // 1 GB
+    fileSize: 10 * 1024 * 1024,
   },
 });
 
-const chunkStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    await ensureChunksDir();
-    cb(null, '/tmp/chunks');
-  },
-  filename: (req, file, cb) => {
-    const { fileId, chunkIndex } = req.body;
-    cb(null, `${fileId}-${chunkIndex}${path.extname(file.originalname)}`);
-  },
-});
+const uploadFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'audio', maxCount: 1 },
+]);
 
-const chunkUpload = multer({
-  storage: chunkStorage,
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|mp3/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = /image\/(jpeg|png)|audio\/(mp3|mpeg)/.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type for chunk'));
-    }
-  },
-  limits: {
-    fileSize: 1024 * 1024 * 1024, // 1 GB
-  },
-});
-
-router.post('/upload-chunk', auth, chunkUpload.single('chunk'), async (req, res) => {
-  try {
-    const { fileId, chunkIndex, totalChunks } = req.body;
-    if (!fileId || !chunkIndex || !totalChunks) {
-      await fs.unlink(req.file.path).catch(() => {});
-      return res.status(400).json({ message: 'fileId, chunkIndex, and totalChunks are required' });
-    }
-    console.log(`Chunk uploaded: fileId=${fileId}, chunkIndex=${chunkIndex}`);
-    res.status(200).json({ message: 'Chunk uploaded', chunkIndex });
-  } catch (error) {
-    console.error('Error uploading chunk:', error);
-    await fs.unlink(req.file.path).catch(() => {});
-    res.status(500).json({ message: 'Failed to upload chunk' });
-  }
-});
-
-router.get('/upload-status/:fileId', auth, async (req, res) => {
-  try {
-    const { fileId } = req.params;
-    const chunkFiles = await fs.readdir('/tmp/chunks').catch(() => []);
-    const uploadedChunks = chunkFiles
-      .filter(file => file.startsWith(fileId))
-      .map(file => parseInt(file.split('-')[1]));
-    res.json({ uploadedChunks: uploadedChunks.sort((a, b) => a - b) });
-  } catch (error) {
-    console.error('Error checking upload status:', error);
-    res.status(500).json({ message: 'Failed to check upload status' });
-  }
-});
-
-router.post(
-  '/',
-  auth,
-  [
-    body('title').notEmpty().withMessage('Title is required'),
-    body('content').notEmpty().withMessage('Content is required'),
-    body('region').notEmpty().withMessage('Region is required'),
-    body('genre').notEmpty().withMessage('Genre is required'),
-    body('ageGroup').notEmpty().withMessage('Age group is required'),
-    body('fileIds').notEmpty().withMessage('File IDs are required'),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { title, content, region, genre, ageGroup, fileIds } = req.body;
-      const parsedFileIds = JSON.parse(fileIds);
-      if (!parsedFileIds.image) {
-        return res.status(400).json({ message: 'Image fileId is required' });
-      }
-
-      const imageChunks = await fs.readdir('/tmp/chunks').catch(() => []);
-      const imageChunkFiles = imageChunks
-        .filter(file => file.startsWith(parsedFileIds.image))
-        .sort((a, b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
-      if (imageChunkFiles.length === 0) {
-        return res.status(400).json({ message: 'No image chunks found' });
-      }
-      const imagePath = `/tmp/final-${parsedFileIds.image}${path.extname(imageChunkFiles[0])}`;
-      const writeStream = (await fs.open(imagePath, 'w')).createWriteStream();
-      for (const chunkFile of imageChunkFiles) {
-        const chunkPath = path.join('/tmp/chunks', chunkFile);
-        const chunkData = await fs.readFile(chunkPath);
-        writeStream.write(chunkData);
-        await fs.unlink(chunkPath).catch(() => {});
-      }
-      writeStream.end();
-
-      const imageResult = await cloudinary.uploader.upload(imagePath, {
-        folder: 'folktales',
-      });
-      await fs.unlink(imagePath).catch(() => {});
-      console.log('Image uploaded:', imageResult.secure_url);
-
-      let audioUrl = null;
-      if (parsedFileIds.audio) {
-        const audioChunkFiles = imageChunks
-          .filter(file => file.startsWith(parsedFileIds.audio))
-          .sort((a, b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
-        if (audioChunkFiles.length === 0) {
-          return res.status(400).json({ message: 'No audio chunks found' });
-        }
-        const audioPath = `/tmp/final-${parsedFileIds.audio}${path.extname(audioChunkFiles[0])}`;
-        const audioWriteStream = (await fs.open(audioPath, 'w')).createWriteStream();
-        for (const chunkFile of audioChunkFiles) {
-          const chunkPath = path.join('/tmp/chunks', chunkFile);
-          const chunkData = await fs.readFile(chunkPath);
-          audioWriteStream.write(chunkData);
-          await fs.unlink(chunkPath).catch(() => {});
-        }
-        audioWriteStream.end();
-
-        try {
-          const audioResult = await cloudinary.uploader.upload(audioPath, {
-            folder: 'folktales_audio',
-            resource_type: 'video',
-          });
-          audioUrl = audioResult.secure_url;
-          await fs.unlink(audioPath).catch(() => {});
-          console.log('Audio uploaded:', audioUrl);
-        } catch (cloudinaryError) {
-          console.error('Cloudinary audio upload error:', cloudinaryError);
-          await fs.unlink(audioPath).catch(() => {});
-          return res.status(500).json({ message: 'Failed to upload audio file' });
-        }
-      }
-
-      const folktale = new Folktale({
-        title,
-        content,
-        region,
-        genre,
-        ageGroup,
-        imageUrl: imageResult.secure_url,
-        audioUrl,
-      });
-
-      await folktale.save();
-      res.status(201).json(folktale);
-    } catch (error) {
-      console.error('Error creating folktale:', error);
-      res.status(500).json({ message: error.message || 'Server error' });
-    }
-  }
-);
-
-router.put(
-  '/:id',
-  auth,
-  [
-    body('title').notEmpty().withMessage('Title is required'),
-    body('content').notEmpty().withMessage('Content is required'),
-    body('region').notEmpty().withMessage('Region is required'),
-    body('genre').notEmpty().withMessage('Genre is required'),
-    body('ageGroup').notEmpty().withMessage('Age group is required'),
-    body('fileIds').optional().isString().withMessage('File IDs must be a string'),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const folktale = await Folktale.findById(req.params.id);
-      if (!folktale) {
-        return res.status(404).json({ message: 'Folktale not found' });
-      }
-
-      folktale.title = req.body.title;
-      folktale.content = req.body.content;
-      folktale.region = req.body.region;
-      folktale.genre = req.body.genre;
-      folktale.ageGroup = req.body.ageGroup;
-
-      if (req.body.fileIds) {
-        const parsedFileIds = JSON.parse(req.body.fileIds);
-        if (parsedFileIds.image) {
-          const imageChunks = await fs.readdir('/tmp/chunks').catch(() => []);
-          const imageChunkFiles = imageChunks
-            .filter(file => file.startsWith(parsedFileIds.image))
-            .sort((a, b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
-          if (imageChunkFiles.length === 0) {
-            return res.status(400).json({ message: 'No image chunks found' });
-          }
-          const imagePath = `/tmp/final-${parsedFileIds.image}${path.extname(imageChunkFiles[0])}`;
-          const writeStream = (await fs.open(imagePath, 'w')).createWriteStream();
-          for (const chunkFile of imageChunkFiles) {
-            const chunkPath = path.join('/tmp/chunks', chunkFile);
-            const chunkData = await fs.readFile(chunkPath);
-            writeStream.write(chunkData);
-            await fs.unlink(chunkPath).catch(() => {});
-          }
-          writeStream.end();
-
-          const imageResult = await cloudinary.uploader.upload(imagePath, {
-            folder: 'folktales',
-          });
-          await fs.unlink(imagePath).catch(() => {});
-          folktale.imageUrl = imageResult.secure_url;
-          console.log('Image updated:', imageResult.secure_url);
-        }
-
-        if (parsedFileIds.audio) {
-          const audioChunkFiles = await fs.readdir('/tmp/chunks').catch(() => []);
-          const audioChunkFilesFiltered = audioChunkFiles
-            .filter(file => file.startsWith(parsedFileIds.audio))
-            .sort((a, b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
-          if (audioChunkFilesFiltered.length === 0) {
-            return res.status(400).json({ message: 'No audio chunks found' });
-          }
-          const audioPath = `/tmp/final-${parsedFileIds.audio}${path.extname(audioChunkFilesFiltered[0])}`;
-          const audioWriteStream = (await fs.open(audioPath, 'w')).createWriteStream();
-          for (const chunkFile of audioChunkFilesFiltered) {
-            const chunkPath = path.join('/tmp/chunks', chunkFile);
-            const chunkData = await fs.readFile(chunkPath);
-            audioWriteStream.write(chunkData);
-            await fs.unlink(chunkPath).catch(() => {});
-          }
-          audioWriteStream.end();
-
-          try {
-            const audioResult = await cloudinary.uploader.upload(audioPath, {
-              folder: 'folktales_audio',
-              resource_type: 'video',
-            });
-            folktale.audioUrl = audioResult.secure_url;
-            await fs.unlink(audioPath).catch(() => {});
-            console.log('Audio updated:', audioResult.secure_url);
-          } catch (cloudinaryError) {
-            console.error('Cloudinary audio update error:', cloudinaryError);
-            await fs.unlink(audioPath).catch(() => {});
-            return res.status(500).json({ message: 'Failed to upload audio file' });
-          }
-        }
-      }
-
-      await folktale.save();
-      res.json(folktale);
-    } catch (error) {
-      console.error('Error updating folktale:', error);
-      res.status(500).json({ message: error.message || 'Server error' });
-    }
-  }
-);
-
-// Remaining routes (unchanged)
 router.post('/generate-story', auth, async (req, res) => {
   const { genre, region, ageGroup } = req.body;
 
@@ -370,15 +85,90 @@ router.post('/generate-story', auth, async (req, res) => {
     res.json({ generatedText });
   } catch (error) {
     console.error('Error generating story:', error);
+    console.error('Error response data:', error.response?.data);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+
     let errorMessage = 'Failed to generate story.';
     if (error.code === 'ECONNABORTED') {
       errorMessage = 'Request timed out. Please try again later.';
     } else if (error.response?.data?.error?.message) {
       errorMessage = error.response.data.error.message;
     }
+
     res.status(500).json({ message: errorMessage });
   }
 });
+
+router.post(
+  '/',
+  auth,
+  uploadFields,
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('content').notEmpty().withMessage('Content is required'),
+    body('region').notEmpty().withMessage('Region is required'),
+    body('genre').notEmpty().withMessage('Genre is required'),
+    body('ageGroup').notEmpty().withMessage('Age group is required'),
+  ],
+  async (req, res) => {
+    try {
+      console.log('Uploaded files:', req.files); // Debug log
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      if (!req.files || !req.files.image) {
+        return res.status(400).json({ message: 'Image is required' });
+      }
+
+      const imageFile = req.files.image[0];
+      const audioFile = req.files.audio ? req.files.audio[0] : null;
+
+      const imageResult = await cloudinary.uploader.upload(imageFile.path, {
+        folder: 'folktales',
+      });
+      console.log('Image uploaded:', imageResult.secure_url); // Debug log
+      await fs.unlink(imageFile.path);
+
+      let audioUrl = null;
+      if (audioFile) {
+        try {
+          const audioResult = await cloudinary.uploader.upload(audioFile.path, {
+            folder: 'folktales_audio',
+            resource_type: 'video',
+          });
+          audioUrl = audioResult.secure_url;
+          console.log('Audio uploaded:', audioUrl); // Debug log
+          await fs.unlink(audioFile.path);
+        } catch (cloudinaryError) {
+          console.error('Cloudinary audio upload error:', cloudinaryError);
+          await fs.unlink(audioFile.path);
+          return res.status(500).json({ message: 'Failed to upload audio file' });
+        }
+      }
+
+      const folktale = new Folktale({
+        title: req.body.title,
+        content: req.body.content,
+        region: req.body.region,
+        genre: req.body.genre,
+        ageGroup: req.body.ageGroup,
+        imageUrl: imageResult.secure_url,
+        audioUrl,
+      });
+
+      await folktale.save();
+      res.status(201).json(folktale);
+    } catch (error) {
+      console.error('Error creating folktale:', error);
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+      res.status(500).json({ message: error.message || 'Server error' });
+    }
+  }
+);
 
 router.get('/', async (req, res) => {
   const { page = 1, limit = 10, region, genre, ageGroup, search } = req.query;
@@ -478,6 +268,76 @@ router.delete('/bookmarks/:folktaleId', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+router.put(
+  '/:id',
+  auth,
+  uploadFields,
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('content').notEmpty().withMessage('Content is required'),
+    body('region').notEmpty().withMessage('Region is required'),
+    body('genre').notEmpty().withMessage('Genre is required'),
+    body('ageGroup').notEmpty().withMessage('Age group is required'),
+  ],
+  async (req, res) => {
+    try {
+      console.log('Uploaded files for update:', req.files); // Debug log
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const folktale = await Folktale.findById(req.params.id);
+      if (!folktale) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+        return res.status(404).json({ message: 'Folktale not found' });
+      }
+
+      folktale.title = req.body.title;
+      folktale.content = req.body.content;
+      folktale.region = req.body.region;
+      folktale.genre = req.body.genre;
+      folktale.ageGroup = req.body.ageGroup;
+
+      if (req.files?.image?.[0]) {
+        const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, {
+          folder: 'folktales',
+        });
+        console.log('Image updated:', imageResult.secure_url); // Debug log
+        await fs.unlink(req.files.image[0].path);
+        folktale.imageUrl = imageResult.secure_url;
+      }
+
+      if (req.files?.audio?.[0]) {
+        try {
+          const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
+            folder: 'folktales_audio',
+            resource_type: 'video',
+          });
+          console.log('Audio updated:', audioResult.secure_url); // Debug log
+          await fs.unlink(req.files.audio[0].path);
+          folktale.audioUrl = audioResult.secure_url;
+        } catch (cloudinaryError) {
+          console.error('Cloudinary audio update error:', cloudinaryError);
+          await fs.unlink(req.files.audio[0].path);
+          return res.status(500).json({ message: 'Failed to upload audio file' });
+        }
+      }
+
+      await folktale.save();
+      res.json(folktale);
+    } catch (error) {
+      console.error('Error updating folktale:', error);
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+      res.status(500).json({ message: error.message || 'Server error' });
+    }
+  }
+);
 
 router.get('/:id', async (req, res) => {
   try {
