@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUser, FaEnvelope, FaLock, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import { 
+  FaUser, 
+  FaEnvelope, 
+  FaLock, 
+  FaCheckCircle, 
+  FaExclamationCircle,
+  FaCrown,
+  FaUserShield,
+  FaUserEdit,
+  FaKey
+} from "react-icons/fa";
+import { motion } from "framer-motion";
 
 function Profile() {
   const navigate = useNavigate();
@@ -9,6 +20,7 @@ function Profile() {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -48,76 +60,212 @@ function Profile() {
       setUser({ ...user, username: formData.username });
       setMessage("Profile updated successfully");
       setFormData({ ...formData, password: "" });
+      setIsEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
       setError(error.response?.data?.message || "Failed to update profile");
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        when: "beforeChildren"
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-        <h2 className="text-2xl font-bold text-amber-900 mb-6 text-center flex items-center justify-center gap-2">
-          <FaUser /> User Profile
-        </h2>
-
-        {message && (
-          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md flex items-center gap-2">
-            <FaCheckCircle /> {message}
-          </div>
-        )}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md flex items-center gap-2">
-            <FaExclamationCircle /> {error}
-          </div>
-        )}
-
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-gray-700 mb-2">
-            <FaEnvelope /> <strong>Email:</strong> {user.email}
-          </div>
-          <div className="flex items-center gap-2 text-gray-700">
-            <FaUser /> <strong>Role:</strong> {user.isAdmin ? "Admin" : "User"}
-          </div>
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full"
+      >
+        <div className="flex justify-center mb-6">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            className="relative"
+          >
+            <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200">
+              <FaUser className="text-amber-700 text-4xl" />
+            </div>
+            {user.isAdmin && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-2 -right-2 bg-amber-600 text-white rounded-full p-1"
+                title="Admin"
+              >
+                <FaCrown className="text-xs" />
+              </motion.div>
+            )}
+          </motion.div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="block text-gray-700 font-semibold mb-1">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-              placeholder="Enter new username"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-gray-700 font-semibold mb-1">
-              New Password (optional)
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-              placeholder="Enter new password"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          <motion.h2 
+            variants={itemVariants}
+            className="text-3xl font-bold text-amber-900 text-center flex items-center justify-center gap-3"
           >
-            Update Profile
-          </button>
-        </form>
-      </div>
+            <FaUserEdit className="text-amber-700" /> 
+            {user.username || "My Profile"}
+          </motion.h2>
+
+          {message && (
+            <motion.div 
+              variants={itemVariants}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-3 border-l-4 border-green-500"
+            >
+              <FaCheckCircle className="text-green-500 flex-shrink-0" /> 
+              <span>{message}</span>
+            </motion.div>
+          )}
+          
+          {error && (
+            <motion.div 
+              variants={itemVariants}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-3 border-l-4 border-red-500"
+            >
+              <FaExclamationCircle className="text-red-500 flex-shrink-0" /> 
+              <span>{error}</span>
+            </motion.div>
+          )}
+
+          <motion.div 
+            variants={itemVariants}
+            className="bg-amber-50 rounded-xl p-4 space-y-3"
+          >
+            <div className="flex items-center gap-3 text-gray-700">
+              <FaEnvelope className="text-amber-700 flex-shrink-0" /> 
+              <div>
+                <p className="text-xs text-amber-600">Email</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 text-gray-700">
+              {user.isAdmin ? (
+                <FaUserShield className="text-amber-700 flex-shrink-0" />
+              ) : (
+                <FaUser className="text-amber-700 flex-shrink-0" />
+              )}
+              <div>
+                <p className="text-xs text-amber-600">Role</p>
+                <p className="font-medium">{user.isAdmin ? "Administrator" : "Standard User"}</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {isEditing ? (
+            <motion.form 
+              variants={containerVariants}
+              onSubmit={handleSubmit}
+              className="space-y-4"
+            >
+              <motion.div variants={itemVariants}>
+                <label htmlFor="username" className="block text-gray-700 font-medium mb-2">
+                  Username
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
+                    placeholder="Enter new username"
+                  />
+                  <FaUser className="absolute left-3 top-3.5 text-amber-600" />
+                </div>
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
+                    placeholder="Enter new password"
+                  />
+                  <FaKey className="absolute left-3 top-3.5 text-amber-600" />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+              </motion.div>
+              
+              <motion.div 
+                variants={itemVariants}
+                className="flex gap-3 pt-2"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  className="flex-1 px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all"
+                >
+                  Save Changes
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 shadow-md transition-all"
+                >
+                  Cancel
+                </motion.button>
+              </motion.div>
+            </motion.form>
+          ) : (
+            <motion.div 
+              variants={itemVariants}
+              className="pt-2"
+            >
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsEditing(true)}
+                className="w-full px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                <FaUserEdit /> Edit Profile
+              </motion.button>
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
