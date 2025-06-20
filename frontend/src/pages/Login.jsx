@@ -14,11 +14,21 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
+    // Normalize inputs: trim spaces and convert email to lowercase
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    if (!normalizedEmail || !normalizedPassword) {
+      setError('Email and password cannot be empty');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await axios.post('/api/auth/login', {
-        email,
-        password,
+        email: normalizedEmail,
+        password: normalizedPassword,
       });
       localStorage.setItem('token', response.data.token);
       navigate('/');
@@ -38,7 +48,7 @@ function Login() {
       
       <div className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-6 sm:p-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulseSketchy">
+          <h2 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-2 animate-pulse">
             Welcome Back
           </h2>
           <p className="text-gray-600 text-base">
@@ -47,7 +57,7 @@ function Login() {
         </div>
 
         {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded-md border-2 border-red-200 mb-5 text-center text-sm font-semibold animate-shake">
+          <div className="bg-red-100 text-white bg-red-600 p-3 rounded-md border-b-2 border-red-2 border-red-200 mb-5 text-center text-sm font-semibold animate-shake">
             {error}
           </div>
         )}
