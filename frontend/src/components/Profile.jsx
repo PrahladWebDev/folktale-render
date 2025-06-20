@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { 
-  FaUser, 
-  FaEnvelope, 
-  FaLock, 
-  FaCheckCircle, 
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaCheckCircle,
   FaExclamationCircle,
   FaCrown,
   FaUserShield,
   FaUserEdit,
   FaKey,
-  FaImage
+  FaImage,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 
@@ -22,6 +22,8 @@ function Profile() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -69,6 +71,8 @@ function Profile() {
     e.preventDefault();
     setMessage("");
     setError("");
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
       const data = new FormData();
@@ -85,6 +89,10 @@ function Profile() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
       });
 
       setUser({ ...user, username: response.data.username, profileImageUrl: response.data.profileImageUrl });
@@ -94,6 +102,9 @@ function Profile() {
     } catch (error) {
       console.error("Error updating profile:", error);
       setError(error.response?.data?.message || "Failed to update profile");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -229,6 +240,7 @@ function Profile() {
                     onChange={handleInputChange}
                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
                     placeholder="Enter new username"
+                    disabled={isUploading}
                   />
                   <FaUser className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
@@ -247,6 +259,7 @@ function Profile() {
                     onChange={handleInputChange}
                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
                     placeholder="Enter new password"
+                    disabled={isUploading}
                   />
                   <FaKey className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
@@ -265,28 +278,52 @@ function Profile() {
                     accept="image/jpeg,image/jpg,image/png"
                     onChange={handleInputChange}
                     className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    disabled={isUploading}
                   />
                   <FaImage className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">JPEG, JPG, or PNG (max 5MB)</p>
               </motion.div>
 
+              {isUploading && (
+                <motion.div
+                  variants={itemVariants}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4"
+                >
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <motion.div
+                      className="bg-amber-600 h-2.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${uploadProgress}%` }}
+                      transition={{ ease: "easeInOut", duration: 0.3 }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1 text-center">
+                    Uploading: {uploadProgress}%
+                  </p>
+                </motion.div>
+              )}
+
               <motion.div variants={itemVariants} className="flex gap-3 pt-2">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: isUploading ? 1 : 1.02 }}
+                  whileTap={{ scale: isUploading ? 1 : 0.98 }}
                   type="submit"
-                  className="flex-1 px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all"
+                  disabled={isUploading}
+                  className="flex-1 px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {isUploading ? "Uploading..." : "Save Changes"}
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: isUploading ? 1 : 1.02 }}
+                  whileTap={{ scale: isUploading ? 1 : 0.98 }}
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="flex-1 px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 shadow-md transition-all"
+                  disabled={isUploading}
+                  className="flex-1 px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 shadow-md transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </motion.button>
