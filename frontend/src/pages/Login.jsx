@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -80,6 +79,19 @@ function Login() {
               required
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
             />
+          </div>
+
+          <div className="text-right mb-4">
+            <a
+              href="/forgot-password"
+              className="text-amber-600 text-sm font-semibold hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/forgot-password');
+              }}
+            >
+              Forgot Password?
+            </a>
           </div>
 
           <button
