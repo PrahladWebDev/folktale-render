@@ -79,7 +79,7 @@ function Navbar() {
 
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
-          {user.username && (
+{/*           {user.username && (
             <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <button
                 className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
@@ -88,7 +88,7 @@ function Navbar() {
               >
                 {renderProfileIcon()}
               </button>
-            </div>
+            </div> */}
           )}
         </div>
 
@@ -139,6 +139,16 @@ function Navbar() {
               >
                 Register
               </button>
+               {user.username && (
+            <div className="flex items-center gap-2 text-amber-900 font-semibold">
+              <button
+                className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
+                onClick={() => navigate("/profile")}
+                title="Profile"
+              >
+                {renderProfileIcon()}
+              </button>
+            </div>
             </>
           )}
         </div>
@@ -152,7 +162,7 @@ function Navbar() {
         <div className="flex flex-col gap-3 pt-4">
           <div className="px-4 flex flex-col gap-3">
             <SearchBar />
-            {user.username && (
+{/*             {user.username && (
               <div className="flex items-center gap-2 text-amber-900 font-semibold">
                 <button
                   className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
@@ -164,7 +174,7 @@ function Navbar() {
                   {renderProfileIcon()}
                 </button>
               </div>
-            )}
+            )} */}
           </div>
 
           <button
@@ -228,6 +238,19 @@ function Navbar() {
               >
                 Register
               </button>
+               {user.username && (
+              <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                <button
+                  className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
+                  onClick={() => {
+                    navigate("/profile");
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  {renderProfileIcon()}
+                </button>
+              </div>
+            )}
             </>
           )}
         </div>
