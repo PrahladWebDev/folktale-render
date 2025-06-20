@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import Resumable from 'resumablejs';
 
 function AdminPanel() {
   const navigate = useNavigate();
@@ -23,15 +22,9 @@ function AdminPanel() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadSpeed, setUploadSpeed] = useState(0);
-  const [startTime, setStartTime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generatingStory, setGeneratingStory] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, paused, success, error
   const token = localStorage.getItem('token');
-  const resumableRef = useRef(null);
-  const fileIdsRef = useRef({ image: null, audio: null });
 
   useEffect(() => {
     const fetchFolktales = async () => {
@@ -49,97 +42,6 @@ function AdminPanel() {
     fetchFolktales();
   }, [token, navigate]);
 
-  useEffect(() => {
-    // Initialize Resumable.js
-    resumableRef.current = new Resumable({
-      target: '/api/folktales/upload-chunk',
-      chunkSize: 5 * 1024 * 1024, // 5 MB chunks
-      simultaneousUploads: 4,
-      headers: { Authorization: `Bearer ${token}` },
-      testChunks: true,
-      generateUniqueIdentifier: () => uuidv4(),
-    });
-
-    resumableRef.current.on('progress', () => {
-      const progress = resumableRef.current.progress() * 100;
-      setUploadProgress(progress);
-      if (startTime) {
-        const elapsedTime = (Date.now() - startTime) / 1000; // seconds
-        if (elapsedTime > 0) {
-          const uploadedBytes = resumableRef.current.progress() * (imageFile?.size + (audioFile?.size || 0));
-          setUploadSpeed(uploadedBytes / elapsedTime / 1024 / 1024); // MB/s
-        }
-      }
-    });
-
-    resumableRef.current.on('complete', async () => {
-      try {
-        const formData = new FormData();
-        formData.append('title', form.title);
-        formData.append('content', form.content);
-        formData.append('region', form.region);
-        formData.append('genre', form.genre);
-        formData.append('ageGroup', form.ageGroup);
-        formData.append('fileIds', JSON.stringify(fileIdsRef.current));
-
-        const config = {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 60000,
-        };
-
-        if (editId) {
-          await axios.put(`/api/folktales/${editId}`, formData, config);
-          setSuccess('Legend updated successfully!');
-          setEditId(null);
-        } else {
-          await axios.post('/api/folktales', formData, config);
-          setSuccess('Legend created successfully!');
-        }
-
-        setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
-        setImageFile(null);
-        setAudioFile(null);
-        setImagePreview('');
-        setAudioPreview('');
-        setUploadProgress(0);
-        setUploadStatus('success');
-        setLoading(false);
-        setIsUploading(false);
-
-        const response = await axios.get('/api/admin/folktales', {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000,
-        });
-        setFolktales(response.data);
-
-        setTimeout(() => {
-          setSuccess('');
-          setUploadStatus('idle');
-        }, 4000);
-      } catch (error) {
-        setError('Failed to finalize upload: ' + error.message);
-        setUploadStatus('error');
-        setLoading(false);
-        setIsUploading(false);
-      }
-    });
-
-    resumableRef.current.on('error', (message) => {
-      setError('Upload failed: ' + message);
-      setUploadStatus('error');
-      setLoading(false);
-      setIsUploading(false);
-    });
-
-    resumableRef.current.on('pause', () => {
-      setUploadStatus('paused');
-    });
-
-    return () => {
-      resumableRef.current.cancel();
-    };
-  }, [editId, token]);
-
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -152,7 +54,7 @@ function AdminPanel() {
     const file = e.target.files[0];
     if (file) {
       const filetypes = /jpeg|jpg|png/;
-      const maxSizeMB = 1024; // 1 GB
+      const maxSizeMB = 5;
       if (!filetypes.test(file.type)) {
         setError('Please upload a JPEG or PNG image.');
         setImageFile(null);
@@ -164,9 +66,6 @@ function AdminPanel() {
         setImageFile(null);
         setImagePreview('');
         return;
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        setError('Large file detected. Upload may take several minutes depending on your connection.');
       }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
@@ -182,7 +81,8 @@ function AdminPanel() {
     if (file) {
       const filetypes = /mp3|mpeg/;
       const extname = /\.mp3$/i.test(file.name);
-      const maxSizeMB = 1024; // 1 GB
+      const maxSizeMB = 10;
+      console.log('Audio file:', { name: file.name, type: file.type, size: file.size }); // Debug log
       if (!filetypes.test(file.type) || !extname) {
         setError('Please upload an MP3 audio file.');
         setAudioFile(null);
@@ -194,9 +94,6 @@ function AdminPanel() {
         setAudioFile(null);
         setAudioPreview('');
         return;
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        setError('Large file detected. Upload may take several minutes depending on your connection.');
       }
       setAudioFile(file);
       setAudioPreview(URL.createObjectURL(file));
@@ -277,55 +174,87 @@ function AdminPanel() {
     }
   };
 
-  const pauseUpload = () => {
-    if (resumableRef.current) {
-      resumableRef.current.pause();
-      setUploadStatus('paused');
-    }
-  };
-
-  const resumeUpload = async () => {
-    if (resumableRef.current) {
-      setUploadStatus('uploading');
-      resumableRef.current.upload();
-    }
-  };
-
-  const cancelUpload = () => {
-    if (resumableRef.current) {
-      resumableRef.current.cancel();
-      setIsUploading(false);
-      setUploadProgress(0);
-      setUploadStatus('error');
-      setError('Upload cancelled by user');
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
-    setIsUploading(true);
     setUploadProgress(0);
-    setUploadStatus('uploading');
-    setStartTime(Date.now());
 
-    if (!imageFile && !editId) {
-      setError('An image is required for new Legends.');
+    try {
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('content', form.content);
+      formData.append('region', form.region);
+      formData.append('genre', form.genre);
+      formData.append('ageGroup', form.ageGroup);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
+
+      // Debug FormData contents
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
+      };
+
+      if (editId) {
+        await axios.put(`/api/folktales/${editId}`, formData, config);
+        setSuccess('Legend updated successfully!');
+        setEditId(null);
+      } else {
+        if (!imageFile) {
+          setError('An image is required for new Legends.');
+          setLoading(false);
+          return;
+        }
+        await axios.post('/api/folktales', formData, config);
+        setSuccess('Legend created successfully!');
+      }
+
+      setForm({ title: '', content: '', region: '', genre: '', ageGroup: '' });
+      setImageFile(null);
+      setAudioFile(null);
+      setImagePreview('');
+      setAudioPreview('');
+      setUploadProgress(0);
       setLoading(false);
-      setIsUploading(false);
-      setUploadStatus('error');
-      return;
+
+      const response = await axios.get('/api/admin/folktales', {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
+      });
+      setFolktales(response.data);
+
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (error) {
+      console.error('Error saving Legend:', error);
+      let errorMessage = 'Failed to save Legend.';
+      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Try uploading smaller files or check server status.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        errorMessage = error.response.data.errors.map(e => e.msg).join(', ');
+      }
+      setError(errorMessage);
+      setLoading(false);
+      setUploadProgress(0);
     }
-
-    fileIdsRef.current = { image: imageFile ? uuidv4() : null, audio: audioFile ? uuidv4() : null };
-
-    if (imageFile) resumableRef.current.addFile(imageFile, undefined, { fileId: fileIdsRef.current.image });
-    if (audioFile) resumableRef.current.addFile(audioFile, undefined, { fileId: fileIdsRef.current.audio });
-
-    resumableRef.current.upload();
   };
 
   const handleEdit = (folktale) => {
@@ -344,7 +273,6 @@ function AdminPanel() {
     setError('');
     setSuccess('');
     setUploadProgress(0);
-    setUploadStatus('idle');
     setLoading(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -685,7 +613,7 @@ function AdminPanel() {
           </div>
 
           <div className="flex flex-col">
-            <label className="mb-1 font-bold text-amber-900">Image (Max 1GB)</label>
+            <label className="mb-1 font-bold text-amber-900">Image (Max 5MB)</label>
             <input
               type="file"
               name="image"
@@ -707,7 +635,7 @@ function AdminPanel() {
           </div>
 
           <div className="flex flex-col">
-            <label className="mb-1 font-bold text-amber-900">Audio (Max 1GB, Optional)</label>
+            <label className="mb-1 font-bold text-amber-900">Audio (Max 10MB, Optional)</label>
             <input
               type="file"
               name="audio"
@@ -740,88 +668,14 @@ function AdminPanel() {
           </div>
         </div>
 
-        {isUploading && (
-          <div className="relative mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-amber-900">Uploading Files</span>
-              <div className="space-x-2">
-                {uploadStatus === 'uploading' && (
-                  <button
-                    type="button"
-                    onClick={pauseUpload}
-                    className="text-yellow-600 text-sm font-semibold hover:underline"
-                    aria-label="Pause upload"
-                  >
-                    Pause
-                  </button>
-                )}
-                {uploadStatus === 'paused' && (
-                  <button
-                    type="button"
-                    onClick={resumeUpload}
-                    className="text-blue-600 text-sm font-semibold hover:underline"
-                    aria-label="Resume upload"
-                  >
-                    Resume
-                  </button>
-                )}
-                {(uploadStatus === 'uploading' || uploadStatus === 'paused') && (
-                  <button
-                    type="button"
-                    onClick={cancelUpload}
-                    className="text-red-600 text-sm font-semibold hover:underline"
-                    aria-label="Cancel upload"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <div className="relative h-6 bg-amber-100 rounded-full overflow-hidden mb-6">
             <div
-              className={`relative h-3 rounded-full overflow-hidden transition-all duration-300 ${
-                uploadStatus === 'error' ? 'bg-red-100' : uploadStatus === 'paused' ? 'bg-yellow-100' : 'bg-amber-100'
-              }`}
-              role="progressbar"
-              aria-valuenow={uploadProgress}
-              aria-valuemin="0"
-              aria-valuemax="100"
-            >
-              <div
-                className={`h-full rounded-full transition-all duration-300 ease-out ${
-                  uploadStatus === 'success'
-                    ? 'bg-green-500'
-                    : uploadStatus === 'error'
-                    ? 'bg-red-500'
-                    : uploadStatus === 'paused'
-                    ? 'bg-yellow-500'
-                    : 'bg-amber-900 animate-pulse'
-                }`}
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
-              <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-800">
-                {uploadStatus === 'success' ? (
-                  <span className="text-green-800">Upload Complete!</span>
-                ) : uploadStatus === 'error' ? (
-                  <span className="text-red-800">Upload Failed</span>
-                ) : uploadStatus === 'paused' ? (
-                  <span className="text-yellow-800">Upload Paused</span>
-                ) : (
-                  <span>{Math.round(uploadProgress)}%</span>
-                )}
-              </div>
-            </div>
-            <div className="mt-1 text-xs text-gray-500">
-              {uploadStatus === 'uploading' && uploadSpeed > 0
-                ? `Uploading at ${uploadSpeed.toFixed(2)} MB/s, estimated time: ${Math.round(
-                    ((100 - uploadProgress) * ((imageFile?.size || 0) + (audioFile?.size || 0)) / 1024 / 1024) / uploadSpeed
-                  )}s remaining`
-                : uploadStatus === 'uploading'
-                ? 'Uploading files, please wait...'
-                : uploadStatus === 'paused'
-                ? 'Upload paused. Click Resume to continue.'
-                : uploadStatus === 'success'
-                ? 'Files uploaded successfully!'
-                : 'Upload failed. Please try again.'}
+              className="h-full bg-amber-900 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+            <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold">
+              {uploadProgress}%
             </div>
           </div>
         )}
@@ -829,7 +683,7 @@ function AdminPanel() {
         <div className="flex gap-3 justify-start">
           <button
             type="submit"
-            disabled={loading || generatingStory || isUploading}
+            disabled={loading || generatingStory}
             className="bg-amber-900 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {editId ? 'Update Legend' : 'Create Legend'}
@@ -837,7 +691,7 @@ function AdminPanel() {
           <button
             type="button"
             onClick={handleGenerateStory}
-            disabled={loading || generatingStory || isUploading}
+            disabled={loading || generatingStory}
             className="bg-blue-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Generate Story
@@ -855,10 +709,9 @@ function AdminPanel() {
                 setError('');
                 setSuccess('');
                 setUploadProgress(0);
-                setUploadStatus('idle');
                 setLoading(false);
               }}
-              disabled={loading || generatingStory || isUploading}
+              disabled={loading || generatingStory}
               className="bg-orange-600 text-white px-5 py-3 rounded-lg text-lg font-bold hover:bg-orange-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Cancel
@@ -912,14 +765,14 @@ function AdminPanel() {
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => handleEdit(f)}
-                disabled={loading || generatingStory || isUploading}
+                disabled={loading || generatingStory}
                 className="flex-1 bg-green-600 text-white py-2 rounded-md font-bold hover:bg-green-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Edit
               </button>
               <button
                 onClick={() => handleDelete(f._id)}
-                disabled={loading || generatingStory || isUploading}
+                disabled={loading || generatingStory}
                 className="flex-1 bg-red-600 text-white py-2 rounded-md font-bold hover:bg-red-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Delete
