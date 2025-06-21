@@ -292,7 +292,7 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
                   toast.warning('Comment cannot exceed 500 characters.');
                 }
               }}
-              placeholder={replyingTo ? 'Write your reply...' : 'Share your thoughts about this folktale...'}
+              placeholder={replyingTo ? 'Write your reply...' : 'Share your thoughts about this...'}
               className="flex-1 min-h-[60px] max-h-[120px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
               aria-label={replyingTo ? 'Reply input' : 'Comment input'}
             />
