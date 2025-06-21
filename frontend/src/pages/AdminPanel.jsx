@@ -593,6 +593,7 @@ function AdminPanel() {
               <option value="Epic">Epic</option>
               <option value="Romance">Romance</option>
               <option value="Unsolved Mysteries">Unsolved Mysteries</option>
+              <option value="Supernatural/Paranormal Entities">Supernatural/Paranormal Entities</option>
             </select>
           </div>
 
