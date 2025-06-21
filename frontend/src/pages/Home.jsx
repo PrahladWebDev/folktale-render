@@ -13,7 +13,7 @@ function Home() {
   const [page, setPage] = useState(1);
   const [errorFolktales, setErrorFolktales] = useState(null);
   const [errorPopular, setErrorPopular] = useState(null);
-  const limit = 10;
+  const limit = 12;
   const location = useLocation();
 
   const popularContainerRef = useRef(null);
