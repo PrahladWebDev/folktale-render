@@ -188,7 +188,7 @@ function Register() {
               </p>
             </div>
           )}
-          <div className="mb-6">
+{/*           <div className="mb-6">
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -201,7 +201,7 @@ function Register() {
                 Register as Admin
               </span>
             </label>
-          </div>
+          </div> */}
           <button
             type="submit"
             disabled={isLoading}
