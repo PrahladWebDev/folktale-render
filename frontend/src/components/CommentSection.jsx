@@ -56,11 +56,13 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
     }
 
     const tempId = `temp-${Date.now()}`;
+    // Include @username in optimistic comment if replying
+    const displayContent = replyingTo ? `@${replyingTo.username} ${content}` : content;
     const optimisticComment = {
       _id: tempId,
       folktaleId,
       userId: { username: 'You' },
-      content,
+      content: displayContent,
       timestamp: new Date(),
       replies: [],
       parentId,
@@ -90,8 +92,7 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
 
     try {
       setIsSubmitting(true);
-      // Only include parentId in the request body if it's defined
-      const requestBody = { content };
+      const requestBody = { content: displayContent };
       if (parentId) {
         requestBody.parentId = parentId;
       }
@@ -160,9 +161,18 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
+    if (!username) {
+      console.warn('No username provided for reply, defaulting to "Anonymous"');
+      username = 'Anonymous';
+    }
+    console.log('Handling reply:', { commentId, username }); // Debug log
     setReplyingTo({ commentId, username });
-    setContent(`@${username} `);
-    setTimeout(() => commentInputRef.current?.focus(), 0);
+    setContent('');
+    setTimeout(() => {
+      if (commentInputRef.current) {
+        commentInputRef.current.focus();
+      }
+    }, 0);
   };
 
   return (
@@ -249,14 +259,16 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
       {token ? (
         <div className="mt-5 sticky bottom-0 bg-gradient-to-br from-amber-50 to-orange-100 p-4 border-t-2 border-amber-200">
           {replyingTo && (
-            <div className="mb-2 text-sm text-amber-900 flex items-center">
-              <span>Replying to @{replyingTo.username}</span>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm text-amber-900 bg-amber-200 px-2 py-1 rounded-md">
+                Replying to @{replyingTo.username}
+              </span>
               <button
                 onClick={() => {
                   setReplyingTo(null);
                   setContent('');
                 }}
-                className="ml-2 text-amber-600 hover:text-amber-800"
+                className="text-amber-600 hover:text-amber-800 text-sm font-semibold"
                 aria-label="Cancel reply"
               >
                 Cancel
@@ -264,6 +276,11 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
             </div>
           )}
           <div className="flex items-end gap-2">
+            {replyingTo && (
+              <span className="text-lg text-amber-900 font-semibold bg-amber-100 px-2 py-3 rounded-md">
+                @{replyingTo.username}
+              </span>
+            )}
             <textarea
               ref={commentInputRef}
               id="comment-input"
@@ -276,7 +293,7 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
                 }
               }}
               placeholder={replyingTo ? 'Write your reply...' : 'Share your thoughts about this folktale...'}
-              className="w-full min-h-[60px] max-h-[120px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
+              className="flex-1 min-h-[60px] max-h-[120px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
               aria-label={replyingTo ? 'Reply input' : 'Comment input'}
             />
             <button
