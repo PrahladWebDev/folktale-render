@@ -388,6 +388,91 @@ router.post(
   }
 );
 
+// router.post(
+//   '/:id/comments',
+//   auth,
+//   [
+//     body('content')
+//       .notEmpty()
+//       .withMessage('Comment content is required'),
+//     body('parentId')
+//       .optional({ nullable: true }) // Allow null or undefined
+//       .if(body('parentId').exists()) // Only validate if parentId is provided
+//       .isMongoId()
+//       .withMessage('Invalid parent comment ID'),
+//   ],
+//   async (req, res) => {
+//     try {
+//       const errors = validationResult(req);
+//       if (!errors.isEmpty()) {
+//         return res.status(400).json({ errors: errors.array() });
+//       }
+
+//       const { content, parentId } = req.body;
+//       const userId = req.user.id;
+//       const folktaleId = req.params.id;
+
+//       const folktale = await Folktale.findById(folktaleId);
+//       if (!folktale) {
+//         return res.status(404).json({ message: 'Folktale not found' });
+//       }
+
+//       if (parentId) {
+//         const parentComment = await Comment.findById(parentId);
+//         if (!parentComment) {
+//           return res.status(404).json({ message: 'Parent comment not found' });
+//         }
+//         // Prevent replies to replies
+//         if (parentComment.parentId) {
+//           return res.status(400).json({ message: 'Replies to replies are not allowed' });
+//         }
+//       }
+
+//       const comment = new Comment({
+//         folktaleId,
+//         userId,
+//         content,
+//         parentId: parentId || null,
+//       });
+//       await comment.save();
+
+//       if (parentId) {
+//         await Comment.findByIdAndUpdate(parentId, {
+//           $push: { replies: comment._id },
+//         });
+//       }
+
+//       const populatedComment = await Comment.findById(comment._id)
+//         .populate('userId', 'username')
+//         .populate({
+//           path: 'replies',
+//           populate: { path: 'userId', select: 'username' },
+//         });
+//       res.status(201).json(populatedComment);
+//     } catch (error) {
+//       console.error('Error posting comment:', error);
+//       res.status(500).json({ message: error.message || 'Server error' });
+//     }
+//   }
+// );
+
+// router.get('/:id/comments', async (req, res) => {
+//   try {
+//     const comments = await Comment.find({ 
+//       folktaleId: req.params.id, 
+//       parentId: null 
+//     })
+//       .populate('userId', 'username')
+//       .populate({
+//         path: 'replies',
+//         populate: { path: 'userId', select: 'username' },
+//       });
+//     res.json(comments);
+//   } catch (error) {
+//     console.error('Error fetching comments:', error);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
 router.post(
   '/:id/comments',
   auth,
@@ -396,8 +481,8 @@ router.post(
       .notEmpty()
       .withMessage('Comment content is required'),
     body('parentId')
-      .optional({ nullable: true }) // Allow null or undefined
-      .if(body('parentId').exists()) // Only validate if parentId is provided
+      .optional({ nullable: true })
+      .if(body('parentId').exists())
       .isMongoId()
       .withMessage('Invalid parent comment ID'),
   ],
@@ -422,7 +507,6 @@ router.post(
         if (!parentComment) {
           return res.status(404).json({ message: 'Parent comment not found' });
         }
-        // Prevent replies to replies
         if (parentComment.parentId) {
           return res.status(400).json({ message: 'Replies to replies are not allowed' });
         }
@@ -443,10 +527,10 @@ router.post(
       }
 
       const populatedComment = await Comment.findById(comment._id)
-        .populate('userId', 'username')
+        .populate('userId', 'username isAdmin')
         .populate({
           path: 'replies',
-          populate: { path: 'userId', select: 'username' },
+          populate: { path: 'userId', select: 'username isAdmin' },
         });
       res.status(201).json(populatedComment);
     } catch (error) {
@@ -462,10 +546,10 @@ router.get('/:id/comments', async (req, res) => {
       folktaleId: req.params.id, 
       parentId: null 
     })
-      .populate('userId', 'username')
+      .populate('userId', 'username isAdmin')
       .populate({
         path: 'replies',
-        populate: { path: 'userId', select: 'username' },
+        populate: { path: 'userId', select: 'username isAdmin' },
       });
     res.json(comments);
   } catch (error) {
@@ -473,6 +557,7 @@ router.get('/:id/comments', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 router.delete('/:id', auth, async (req, res) => {
   try {
