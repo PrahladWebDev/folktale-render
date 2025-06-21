@@ -33,7 +33,7 @@ function FolktaleDetail() {
         ]);
 
         if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
-          throw new Error('Invalid folktale data received');
+          throw new Error('Invalid legend data received');
         }
         setFolktale(folktaleResponse.data);
 
@@ -71,13 +71,13 @@ function FolktaleDetail() {
           }
         }
       } catch (err) {
-        console.error('Error fetching folktale:', err);
+        console.error('Error fetching legend:', err);
         if (err.response?.status === 404) {
           setError('Folktale not found.');
         } else if (err.code === 'ERR_NETWORK') {
           setError('Network error. Please check your connection and try again.');
         } else {
-          setError('Failed to load folktale. Please try again later.');
+          setError('Failed to load legend. Please try again later.');
         }
       } finally {
         setIsLoading(false);
@@ -89,7 +89,7 @@ function FolktaleDetail() {
 
   const handleRate = async () => {
     if (!token) {
-      toast.warning('Please log in to rate this folktale.');
+      toast.warning('Please log in to rate this legend.');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
@@ -124,7 +124,7 @@ function FolktaleDetail() {
 
   const handleBookmark = async () => {
     if (!token) {
-      toast.warning('Please log in to bookmark this folktale.');
+      toast.warning('Please log in to bookmark this legend.');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
@@ -143,7 +143,7 @@ function FolktaleDetail() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsBookmarked(true);
-        toast.success('Folktale bookmarked!');
+        toast.success('legend bookmarked!');
       }
     } catch (error) {
       console.error('Bookmark error:', error);
@@ -154,7 +154,7 @@ function FolktaleDetail() {
       } else if (error.code === 'ERR_NETWORK') {
         toast.error('Network error. Please check your connection.');
       } else {
-        toast.error('Failed to update bookmark.');
+        toast.error('Failed to update legend.');
       }
     }
   };
@@ -171,7 +171,7 @@ function FolktaleDetail() {
   if (isLoading) {
     return (
       <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulse">
-        Loading Folktale...
+        Loading Legend...
       </div>
     );
   }
@@ -187,7 +187,7 @@ function FolktaleDetail() {
   if (!folktale) {
     return (
       <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">
-        No folktale data available.
+        No legend data available.
       </div>
     );
   }
@@ -285,7 +285,7 @@ function FolktaleDetail() {
 
         {folktale.ageGroup === 'Adults' && (
           <div className="bg-amber-100 text-amber-800 p-4 rounded-lg border-2 border-amber-200 mb-6 text-base animate-shake">
-            <p><strong className="text-amber-900">⚠️ Warning:</strong> This folktale contains content intended for adult readers.</p>
+            <p><strong className="text-amber-900">⚠️ Warning:</strong> This legend contains content intended for adult readers.</p>
           </div>
         )}
 
@@ -321,7 +321,7 @@ function FolktaleDetail() {
 
         {token && (
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
-            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this legend</h3>
             <div className="flex gap-4 items-center flex-wrap">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
