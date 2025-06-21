@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
@@ -8,10 +8,8 @@ function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState({ username: null, profileImageUrl: "" });
   const token = localStorage.getItem("token");
-  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -33,39 +31,15 @@ function Navbar() {
     checkUser();
   }, [token]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser({ username: null, profileImageUrl: "" });
     navigate("/login");
     setIsMenuOpen(false);
-    setIsDropdownOpen(false);
   };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    setIsDropdownOpen(false);
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleDropdownNavigation = (path) => {
-    navigate(path);
-    setIsDropdownOpen(false);
-    setIsMenuOpen(false);
   };
 
   const renderProfileIcon = () => (
@@ -82,40 +56,6 @@ function Navbar() {
     </div>
   );
 
-  const renderDropdown = () => (
-    <div
-      className="absolute right-0 mt-2 w-48 bg-amber-50 shadow-lg rounded-md py-2 z-50 animate-slideDown"
-      ref={dropdownRef}
-    >
-      <button
-        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-200 transition-colors duration-200"
-        onClick={() => handleDropdownNavigation("/profile")}
-      >
-        My Profile
-      </button>
-      <button
-        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-200 transition-colors duration-200 flex items-center gap-2"
-        onClick={() => handleDropdownNavigation("/bookmarks")}
-      >
-        <FaBookmark /> Bookmarks
-      </button>
-      {isAdmin && (
-        <button
-          className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-200 transition-colors duration-200"
-          onClick={() => handleDropdownNavigation("/admin")}
-        >
-          Admin Panel
-        </button>
-      )}
-      <button
-        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-200 transition-colors duration-200"
-        onClick={handleLogout}
-      >
-        Logout
-      </button>
-    </div>
-  );
-
   return (
     <nav className="bg-gradient-to-r from-amber-50 to-orange-100 shadow-md p-3 sticky top-0 z-[1000] font-caveat text-gray-800 animate-fadeIn">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -124,7 +64,6 @@ function Navbar() {
           onClick={() => {
             navigate("/");
             setIsMenuOpen(false);
-            setIsDropdownOpen(false);
           }}
         >
           Legend संसार
@@ -141,15 +80,14 @@ function Navbar() {
         <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
           <SearchBar />
           {user.username && (
-            <div className="relative">
+            <div className="flex items-center gap-2 text-amber-900 font-semibold">
               <button
                 className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
-                onClick={toggleDropdown}
+                onClick={() => navigate("/profile")}
                 title="Profile"
               >
                 {renderProfileIcon()}
               </button>
-              {isDropdownOpen && renderDropdown()}
             </div>
           )}
         </div>
@@ -162,8 +100,24 @@ function Navbar() {
             <span>🌍</span> Map
           </button>
 
+          <button
+            className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+            onClick={() => navigate("/bookmarks")}
+            title="Bookmarks"
+          >
+            <FaBookmark />
+          </button>
+
           {token ? (
             <>
+              {isAdmin && (
+                <button
+                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => navigate("/admin")}
+                >
+                  Admin Panel
+                </button>
+              )}
               <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                 onClick={handleLogout}
@@ -199,14 +153,16 @@ function Navbar() {
           <div className="px-4 flex flex-col gap-3">
             <SearchBar />
             {user.username && (
-              <div className="relative">
+              <div className="flex items-center gap-2 text-amber-900 font-semibold">
                 <button
                   className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
-                  onClick={toggleDropdown}
+                  onClick={() => {
+                    navigate("/profile");
+                    setIsMenuOpen(false);
+                  }}
                 >
                   {renderProfileIcon()}
                 </button>
-                {isDropdownOpen && renderDropdown()}
               </div>
             )}
           </div>
@@ -216,14 +172,35 @@ function Navbar() {
             onClick={() => {
               navigate("/map");
               setIsMenuOpen(false);
-              setIsDropdownOpen(false);
             }}
           >
             <span>🌍</span> Map
           </button>
 
+          <button
+            className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
+            onClick={() => {
+              navigate("/bookmarks");
+              setIsMenuOpen(false);
+            }}
+            title="Bookmarks"
+          >
+            <FaBookmark />
+          </button>
+
           {token ? (
             <>
+              {isAdmin && (
+                <button
+                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
+                  onClick={() => {
+                    navigate("/admin");
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  Admin Panel
+                </button>
+              )}
               <button
                 className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={handleLogout}
@@ -238,7 +215,6 @@ function Navbar() {
                 onClick={() => {
                   navigate("/login");
                   setIsMenuOpen(false);
-                  setIsDropdownOpen(false);
                 }}
               >
                 Login
@@ -248,7 +224,6 @@ function Navbar() {
                 onClick={() => {
                   navigate("/register");
                   setIsMenuOpen(false);
-                  setIsDropdownOpen(false);
                 }}
               >
                 Register
