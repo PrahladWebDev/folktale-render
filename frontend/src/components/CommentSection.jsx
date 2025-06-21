@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-function CommentSection({ folktaleId }) {
+function CommentSection({ folktaleId, closeModal }) {
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState('');
   const [alert, setAlert] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -37,17 +38,28 @@ function CommentSection({ folktaleId }) {
     try {
       const response = await axios.post(
         `/api/folktales/${folktaleId}/comments`,
-        { content },
+        { content, parentCommentId: replyTo?._id || null },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setComments([...comments, response.data]);
       setContent('');
+      setReplyTo(null);
       setAlert({ type: 'success', message: 'Comment posted successfully!' });
     } catch (error) {
       console.error('Error posting comment:', error);
       const errorMessage = error.response?.data?.message || 'Failed to post comment. Please try again.';
       setAlert({ type: 'error', message: errorMessage });
     }
+  };
+
+  const handleReply = (comment) => {
+    if (!token) {
+      setAlert({ type: 'warning', message: 'Please log in to reply to a comment.' });
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+    setReplyTo(comment);
+    setContent(`@${comment.userId.username} `);
   };
 
   useEffect(() => {
@@ -58,7 +70,7 @@ function CommentSection({ folktaleId }) {
   }, [alert]);
 
   return (
-    <div className="mt-10 p-6 bg-gradient-to-br from-amber-50 to-orange-100 rounded-lg border-2 border-amber-300 shadow-lg font-caveat text-gray-800">
+    <div className="p-4 font-caveat text-gray-800">
       {alert && (
         <div
           className={`p-3 mb-5 rounded-md text-center text-lg animate-shake ${
@@ -71,11 +83,7 @@ function CommentSection({ folktaleId }) {
         </div>
       )}
 
-      <h3 className="text-2xl sm:text-3xl font-bold text-amber-900 mb-5 pb-3 border-b-4 border-amber-300 text-center animate-pulseSketchy">
-        Comments ({comments.length})
-      </h3>
-
-      <div className="mb-8 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
+      <div className="mb-8 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-amber-300 scrollbar-track-amber-50">
         {comments.length > 0 ? (
           comments.map((comment) => (
             <div
@@ -95,6 +103,36 @@ function CommentSection({ folktaleId }) {
                 </span>
               </div>
               <p className="m-0 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+              <button
+                onClick={() => handleReply(comment)}
+                className="text-sm text-amber-600 hover:text-amber-700 mt-2"
+              >
+                Reply
+              </button>
+              {comment.replies?.length > 0 && (
+                <div className="ml-4 mt-2 border-l-2 border-amber-200 pl-4">
+                  {comment.replies.map((reply) => (
+                    <div
+                      key={reply._id}
+                      className="bg-amber-50 rounded-md p-3 mb-2 shadow-sm border border-amber-100"
+                    >
+                      <div className="flex justify-between items-center mb-1 flex-wrap gap-2">
+                        <span className="font-bold text-amber-800">{reply.userId.username}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(reply.timestamp).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="m-0 text-sm leading-relaxed whitespace-pre-wrap">{reply.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -105,24 +143,37 @@ function CommentSection({ folktaleId }) {
       </div>
 
       {token ? (
-        <div className="mt-5">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your thoughts about this legend..."
-            className="w-full min-h-[100px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
-          />
-          <button
-            onClick={handleComment}
-            disabled={!content.trim()}
-            className={`mt-3 px-5 py-2 rounded-md text-lg font-bold text-white transition-all duration-300 ${
-              content.trim()
-                ? 'bg-amber-900 hover:bg-amber-800 hover:shadow-lg transform hover:scale-105'
-                : 'bg-gray-300 cursor-not-allowed'
-            }`}
-          >
-            Post Comment
-          </button>
+        <div className="sticky bottom-0 bg-white p-4 border-t-2 border-amber-200">
+          {replyTo && (
+            <div className="flex items-center mb-2 text-sm text-gray-600">
+              <span>Replying to {replyTo.userId.username}</span>
+              <button
+                onClick={() => setReplyTo(null)}
+                className="ml-2 text-amber-600 hover:text-amber-700"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={replyTo ? 'Write your reply...' : 'Share your thoughts about this legend...'}
+              className="w-full min-h-[50px] p-3 rounded-md border-2 border-gray-200 bg-amber-50 text-gray-800 text-lg resize-y focus:outline-none focus:border-amber-300 transition-colors duration-300"
+            />
+            <button
+              onClick={handleComment}
+              disabled={!content.trim()}
+              className={`px-4 py-2 rounded-md text-lg font-bold text-white transition-all duration-300 ${
+                content.trim()
+                  ? 'bg-amber-900 hover:bg-amber-800 hover:shadow-lg transform hover:scale-105'
+                  : 'bg-gray-300 cursor-not-allowed'
+              }`}
+            >
+              Post
+            </button>
+          </div>
         </div>
       ) : (
         <div className="text-center p-4 bg-white rounded-md shadow-sm border-2 border-amber-200">
@@ -134,6 +185,7 @@ function CommentSection({ folktaleId }) {
               onClick={(e) => {
                 e.preventDefault();
                 navigate('/login');
+                closeModal();
               }}
             >
               log in
