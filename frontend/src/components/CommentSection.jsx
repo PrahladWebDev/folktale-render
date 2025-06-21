@@ -36,9 +36,15 @@ function CommentSection({ folktaleId, closeModal }) {
     }
 
     try {
+      // Only include parentCommentId if replyTo exists
+      const commentData = { content };
+      if (replyTo?._id) {
+        commentData.parentCommentId = replyTo._id;
+      }
+
       const response = await axios.post(
         `/api/folktales/${folktaleId}/comments`,
-        { content, parentCommentId: replyTo?._id || null },
+        commentData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setComments([...comments, response.data]);
