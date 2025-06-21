@@ -34,7 +34,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
         setSimilarFolktales(filteredFolktales);
       } catch (err) {
         console.error('Error fetching similar legends:', err);
-        setError(('Failed to load similar legends.'));
+        setError('Failed to load similar legends.');
       } finally {
         setIsLoading(false);
       }
@@ -86,7 +86,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
           className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide"
           style={{ scrollSnapType: 'x mandatory' }}
         >
-          {similarFolktales.map((folktale) =>Uncaught SyntaxError: Unexpected token ')' (
+          {similarFolktales.map((folktale) => (
             <div
               key={folktale._id}
               className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300"
