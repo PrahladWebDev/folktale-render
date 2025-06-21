@@ -396,7 +396,8 @@ router.post(
       .notEmpty()
       .withMessage('Comment content is required'),
     body('parentId')
-      .optional()
+      .optional({ nullable: true }) // Allow null or undefined
+      .if(body('parentId').exists()) // Only validate if parentId is provided
       .isMongoId()
       .withMessage('Invalid parent comment ID'),
   ],
@@ -421,17 +422,11 @@ router.post(
         if (!parentComment) {
           return res.status(404).json({ message: 'Parent comment not found' });
         }
-        // Prevent deep nesting (e.g., limit to one level of replies)
+        // Prevent replies to replies
         if (parentComment.parentId) {
           return res.status(400).json({ message: 'Replies to replies are not allowed' });
         }
       }
-
-      // Check for existing comment by user on this folktale (optional, removed to allow multiple comments)
-      // const existingComment = await Comment.findOne({ folktaleId, userId, parentId: parentId || null });
-      // if (existingComment) {
-      //   return res.status(400).json({ message: 'You have already commented on this folktale' });
-      // }
 
       const comment = new Comment({
         folktaleId,
