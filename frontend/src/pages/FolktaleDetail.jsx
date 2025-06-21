@@ -4,8 +4,8 @@ import axios from 'axios';
 import CommentSection from '../components/CommentSection';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
-import { FaStar, FaComment } from 'react-icons/fa';
+import { BsBookmark, BsBookmarkFill, BsChat } from 'react-icons/bs';
+import { FaStar } from 'react-icons/fa';
 
 function FolktaleDetail() {
   const { id } = useParams();
@@ -16,7 +16,7 @@ function FolktaleDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -27,7 +27,7 @@ function FolktaleDetail() {
       try {
         const folktaleResponse = await axios.get(`/api/folktales/${id}`);
         if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
-          throw new Error('Invalid legend data received');
+          throw new Error('Invalid folktale data received');
         }
         setFolktale(folktaleResponse.data);
 
@@ -57,11 +57,11 @@ function FolktaleDetail() {
           }
         }
       } catch (err) {
-        console.error('Error fetching legend:', err);
+        console.error('Error fetching folktale:', err);
         if (err.response?.status === 404) {
           setError('Folktale not found.');
         } else {
-          setError('Failed to load legend. Please try again later.');
+          setError('Failed to load folktale. Please try again later.');
         }
       } finally {
         setIsLoading(false);
@@ -125,7 +125,7 @@ function FolktaleDetail() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsBookmarked(true);
-        toast.success('Legend bookmarked!');
+        toast.success('Folktale bookmarked!');
       }
     } catch (error) {
       console.error('Bookmark error:', error);
@@ -148,14 +148,10 @@ function FolktaleDetail() {
     return true;
   };
 
-  const toggleCommentModal = () => {
-    setIsCommentModalOpen(!isCommentModalOpen);
-  };
-
   if (isLoading) {
     return (
-      <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulseSketchy">
-        Loading Legend...
+      <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulse">
+        Loading Folktale...
       </div>
     );
   }
@@ -171,7 +167,7 @@ function FolktaleDetail() {
   if (!folktale) {
     return (
       <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">
-        No legend data available.
+        No folktale data available.
       </div>
     );
   }
@@ -181,12 +177,12 @@ function FolktaleDetail() {
     : 'No ratings';
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fadeIn">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fade-in">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar closeOnClick pauseOnHover theme="light" />
 
-      <div className="bg-white rounded-lg p-6 sm:p-8 shadow-md border-2 border-amber-200 relative">
+      <div className="bg-white rounded-lg p-6 sm:p-8 shadow-md border-2 border-amber-200">
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-4xl font-bold text-amber-900 mb-4 animate-pulseSketchy">
+          <h1 className="text-2xl sm:text-4xl font-bold text-amber-900 mb-4 animate-pulse">
             {folktale.title}
           </h1>
           <div className="flex flex-wrap justify-center gap-3 mb-5 items-center text-sm">
@@ -214,11 +210,11 @@ function FolktaleDetail() {
               {isBookmarked ? <BsBookmarkFill className="text-2xl" /> : <BsBookmark className="text-2xl" />}
             </button>
             <button
-              onClick={toggleCommentModal}
+              onClick={() => setShowComments(true)}
               className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
               title="View comments"
             >
-              <FaComment className="text-2xl" />
+              <BsChat className="text-2xl" />
             </button>
           </div>
         </div>
@@ -323,23 +319,19 @@ function FolktaleDetail() {
           </div>
         )}
 
-        {isCommentModalOpen && (
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-lg shadow-2xl max-h-[80vh] overflow-y-auto transform transition-transform duration-300 ease-in-out sm:max-w-md sm:mx-auto"
-               style={{ transform: isCommentModalOpen ? 'translateY(0)' : 'translateY(100%)' }}>
-            <div className="flex justify-between items-center p-4 border-b-2 border-amber-200 sticky top-0 bg-white z-10">
-              <h3 className="text-xl font-bold text-amber-900">Comments</h3>
+        {showComments && (
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out">
+            <div className="flex justify-between items-center p-4 border-b-2 border-amber-200">
+              <h3 className="text-2xl font-bold text-amber-900">Comments</h3>
               <button
-                onClick={toggleCommentModal}
-                className="text-amber-900 hover:text-amber-700 text-2xl"
+                onClick={() => setShowComments(false)}
+                className="text-amber-900 hover:text-amber-700 text-xl font-bold"
               >
-                &times;
+                Close
               </button>
             </div>
-            <CommentSection folktaleId={id} closeModal={toggleCommentModal} />
+            <CommentSection folktaleId={id} />
           </div>
-        )}
-        {isCommentModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 z-40" onClick={toggleCommentModal}></div>
         )}
       </div>
     </div>
