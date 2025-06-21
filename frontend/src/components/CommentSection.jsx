@@ -56,19 +56,17 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
     }
 
     const tempId = `temp-${Date.now()}`;
-    // Include @username in optimistic comment if replying
     const displayContent = replyingTo ? `@${replyingTo.username} ${content}` : content;
     const optimisticComment = {
       _id: tempId,
       folktaleId,
-      userId: { username: 'You' },
+      userId: { username: 'You', isAdmin: false },
       content: displayContent,
       timestamp: new Date(),
       replies: [],
       parentId,
     };
 
-    // Optimistic update
     setComments((prevComments) => {
       if (parentId) {
         return prevComments.map((comment) =>
@@ -82,7 +80,6 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
     setContent('');
     setReplyingTo(null);
 
-    // Scroll to the new comment
     setTimeout(() => {
       const newComment = commentListRef.current?.querySelector(`[data-comment-id="${tempId}"]`);
       if (newComment) {
@@ -105,7 +102,6 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
         throw new Error('Invalid comment response');
       }
 
-      // Replace optimistic comment with server response
       setComments((prevComments) => {
         if (parentId) {
           return prevComments.map((comment) =>
@@ -127,7 +123,6 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
       onCommentPosted();
     } catch (error) {
       console.error('Error posting comment:', error);
-      // Rollback optimistic update
       setComments((prevComments) => {
         if (parentId) {
           return prevComments.map((comment) =>
@@ -165,7 +160,7 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
       console.warn('No username provided for reply, defaulting to "Anonymous"');
       username = 'Anonymous';
     }
-    console.log('Handling reply:', { commentId, username }); // Debug log
+    console.log('Handling reply:', { commentId, username });
     setReplyingTo({ commentId, username });
     setContent('');
     setTimeout(() => {
@@ -199,9 +194,16 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
           {comments.length > 0 ? (
             comments.map((comment) => (
               <div key={comment._id} data-comment-id={comment._id} className="mb-4 animate-fade-in">
-                <div className="bg-white rounded-md p-4 shadow-sm border-2 border-amber-200">
+                <div className={`rounded-md p-4 shadow-sm border-2 ${
+                  comment.userId?.isAdmin ? 'bg-blue-50 border-blue-300' : 'bg-white border-amber-200'
+                }`}>
                   <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-                    <span className="font-bold text-amber-900">{comment.userId?.username || 'Anonymous'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-amber-900">{comment.userId?.username || 'Anonymous'}</span>
+                      {comment.userId?.isAdmin && (
+                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">Admin</span>
+                      )}
+                    </div>
                     <span className="text-sm text-gray-600">
                       {new Date(comment.timestamp).toLocaleString('en-US', {
                         year: 'numeric',
@@ -227,10 +229,17 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
                       <div
                         key={reply._id}
                         data-comment-id={reply._id}
-                        className="bg-white rounded-md p-3 shadow-sm border-2 border-amber-100 mb-2 animate-fade-in"
+                        className={`bg-white rounded-md p-3 shadow-sm border-2 ${
+                          reply.userId?.isAdmin ? 'bg-blue-50 border-blue-300' : 'bg-white border-amber-100'
+                        } mb-2 animate-fade-in`}
                       >
                         <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-                          <span className="font-bold text-amber-900">{reply.userId?.username || 'Anonymous'}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-amber-900">{reply.userId?.username || 'Anonymous'}</span>
+                            {reply.userId?.isAdmin && (
+                              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">Admin</span>
+                            )}
+                          </div>
                           <span className="text-sm text-gray-600">
                             {new Date(reply.timestamp).toLocaleString('en-US', {
                               year: 'numeric',
@@ -276,11 +285,6 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
             </div>
           )}
           <div className="flex items-end gap-2">
-{/*             {replyingTo && (
-              <span className="text-lg text-amber-900 font-semibold bg-amber-100 px-2 py-3 rounded-md">
-                @{replyingTo.username}
-              </span>
-            )} */}
             <textarea
               ref={commentInputRef}
               id="comment-input"
