@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CommentSection from '../components/CommentSection';
@@ -17,7 +17,9 @@ function FolktaleDetail() {
   const [error, setError] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const token = localStorage.getItem('token');
+  const commentSectionRef = useRef(null);
 
   useEffect(() => {
     const fetchFolktaleAndBookmarks = async () => {
@@ -25,11 +27,23 @@ function FolktaleDetail() {
       setError(null);
 
       try {
-        const folktaleResponse = await axios.get(`/api/folktales/${id}`);
+        const [folktaleResponse, commentsResponse] = await Promise.all([
+          axios.get(`/api/folktales/${id}`),
+          axios.get(`/api/folktales/${id}/comments`),
+        ]);
+
         if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
           throw new Error('Invalid folktale data received');
         }
         setFolktale(folktaleResponse.data);
+
+        // Calculate total comment count (top-level + replies)
+        const comments = commentsResponse.data || [];
+        const totalComments = comments.reduce(
+          (count, comment) => count + 1 + (comment.replies?.length || 0),
+          0
+        );
+        setCommentCount(totalComments);
 
         if (token) {
           try {
@@ -60,6 +74,8 @@ function FolktaleDetail() {
         console.error('Error fetching folktale:', err);
         if (err.response?.status === 404) {
           setError('Folktale not found.');
+        } else if (err.code === 'ERR_NETWORK') {
+          setError('Network error. Please check your connection and try again.');
         } else {
           setError('Failed to load folktale. Please try again later.');
         }
@@ -97,6 +113,8 @@ function FolktaleDetail() {
         toast.warning('Session expired. Please log in again.');
         localStorage.removeItem('token');
         navigate('/login');
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Network error. Please check your connection.');
       } else {
         const errorMessage = error.response?.data?.message || 'Failed to submit rating.';
         toast.error(errorMessage);
@@ -133,6 +151,8 @@ function FolktaleDetail() {
         toast.warning('Session expired. Please log in again.');
         localStorage.removeItem('token');
         navigate('/login');
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Network error. Please check your connection.');
       } else {
         toast.error('Failed to update bookmark.');
       }
@@ -206,15 +226,22 @@ function FolktaleDetail() {
               onClick={handleBookmark}
               className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
               title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
             >
               {isBookmarked ? <BsBookmarkFill className="text-2xl" /> : <BsBookmark className="text-2xl" />}
             </button>
             <button
               onClick={() => setShowComments(true)}
-              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
+              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200 relative"
               title="View comments"
+              aria-label={`View ${commentCount} comments`}
             >
               <BsChat className="text-2xl" />
+              {commentCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs rounded-full px-1.5 py-0.5">
+                  {commentCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -306,12 +333,14 @@ function FolktaleDetail() {
                     onClick={() => setRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
+                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                   />
                 ))}
               </div>
               <button
                 onClick={handleRate}
                 className="bg-amber-600 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                aria-label="Submit rating"
               >
                 Submit Rating
               </button>
@@ -320,17 +349,37 @@ function FolktaleDetail() {
         )}
 
         {showComments && (
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out">
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="comments-title"
+          >
             <div className="flex justify-between items-center p-4 border-b-2 border-amber-200">
-              <h3 className="text-2xl font-bold text-amber-900">Comments</h3>
+              <h3 id="comments-title" className="text-2xl font-bold text-amber-900">
+                Comments ({commentCount})
+              </h3>
               <button
                 onClick={() => setShowComments(false)}
                 className="text-amber-900 hover:text-amber-700 text-xl font-bold"
+                aria-label="Close comments"
               >
                 Close
               </button>
             </div>
-            <CommentSection folktaleId={id} />
+            <CommentSection
+              folktaleId={id}
+              ref={commentSectionRef}
+              onCommentPosted={() => {
+                axios.get(`/api/folktales/${id}/comments`).then((res) => {
+                  const totalComments = res.data.reduce(
+                    (count, comment) => count + 1 + (comment.replies?.length || 0),
+                    0
+                  );
+                  setCommentCount(totalComments);
+                });
+              }}
+            />
           </div>
         )}
       </div>
