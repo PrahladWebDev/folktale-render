@@ -84,18 +84,13 @@ router.post('/generate-story', auth, async (req, res) => {
     const generatedText = response.data.choices[0].message.content;
     res.json({ generatedText });
   } catch (error) {
-    console.error('Error generating story:', error);
-    console.error('Error response data:', error.response?.data);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-
-    let errorMessage = 'Failed to generate story.';
+    console.error('Error generating story:', error.response?.data || error.message);
+    let errorMessage = ' Hawkins';
     if (error.code === 'ECONNABORTED') {
       errorMessage = 'Request timed out. Please try again later.';
     } else if (error.response?.data?.error?.message) {
       errorMessage = error.response.data.error.message;
     }
-
     res.status(500).json({ message: errorMessage });
   }
 });
@@ -312,7 +307,7 @@ router.put(
         folktale.imageUrl = imageResult.secure_url;
       }
 
-      if (req.files?. BodyFiles?.audio?.[0]) {
+      if (req.files?.audio?.[0]) {
         try {
           const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
             folder: 'folktales_audio',
@@ -400,7 +395,7 @@ router.post(
     body('content')
       .notEmpty()
       .withMessage('Comment content is required'),
-    body('parentCommentId')
+    body('parentId')
       .optional()
       .isMongoId()
       .withMessage('Invalid parent comment ID'),
@@ -412,7 +407,7 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { content, parentCommentId } = req.body;
+      const { content, parentId } = req.body;
       const userId = req.user.id;
       const folktaleId = req.params.id;
 
@@ -421,53 +416,62 @@ router.post(
         return res.status(404).json({ message: 'Folktale not found' });
       }
 
-      if (parentCommentId) {
-        const parentComment = await Comment.findById(parentCommentId);
-        if (!parentComment || parentComment.folktaleId.toString() !== folktaleId) {
-          return res.status(404).json({ message: 'Parent comment not found or does not belong to this folktale' });
+      if (parentId) {
+        const parentComment = await Comment.findById(parentId);
+        if (!parentComment) {
+          return res.status(404).json({ message: 'Parent comment not found' });
         }
-        // Optional: Limit nesting depth
-        if (parentComment.parentCommentId) {
-          return res.status(400).json({ message: 'Replies cannot be nested more than one level deep' });
+        // Prevent deep nesting (e.g., limit to one level of replies)
+        if (parentComment.parentId) {
+          return res.status(400).json({ message: 'Replies to replies are not allowed' });
         }
       }
+
+      // Check for existing comment by user on this folktale (optional, removed to allow multiple comments)
+      // const existingComment = await Comment.findOne({ folktaleId, userId, parentId: parentId || null });
+      // if (existingComment) {
+      //   return res.status(400).json({ message: 'You have already commented on this folktale' });
+      // }
 
       const comment = new Comment({
         folktaleId,
         userId,
         content,
-        parentCommentId: parentCommentId || null,
+        parentId: parentId || null,
       });
       await comment.save();
-      const populatedComment = await Comment.findById(comment._id).populate('userId', 'username');
+
+      if (parentId) {
+        await Comment.findByIdAndUpdate(parentId, {
+          $push: { replies: comment._id },
+        });
+      }
+
+      const populatedComment = await Comment.findById(comment._id)
+        .populate('userId', 'username')
+        .populate({
+          path: 'replies',
+          populate: { path: 'userId', select: 'username' },
+        });
       res.status(201).json(populatedComment);
     } catch (error) {
       console.error('Error posting comment:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: error.message || 'Server error' });
     }
   }
 );
 
 router.get('/:id/comments', async (req, res) => {
   try {
-    // Fetch top-level comments
     const comments = await Comment.find({ 
       folktaleId: req.params.id, 
-      parentCommentId: null 
+      parentId: null 
     })
       .populate('userId', 'username')
-      .lean();
-
-    // Fetch replies for each top-level comment
-    for (let comment of comments) {
-      const replies = await Comment.find({ 
-        parentCommentId: comment._id 
-      })
-        .populate('userId', 'username')
-        .lean();
-      comment.replies = replies;
-    }
-
+      .populate({
+        path: 'replies',
+        populate: { path: 'userId', select: 'username' },
+      });
     res.json(comments);
   } catch (error) {
     console.error('Error fetching comments:', error);
@@ -482,8 +486,16 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Folktale not found' });
     }
 
+    // Delete associated comments and their replies
+    await Comment.deleteMany({ 
+      $or: [
+        { folktaleId: req.params.id },
+        { parentId: { $in: await Comment.find({ folktaleId: req.params.id }).distinct('_id') } },
+      ],
+    });
+
     await Folktale.deleteOne({ _id: req.params.id });
-    res.json({ message: 'Folktale deleted' });
+    res.json({ message: 'Folktale and associated comments deleted' });
   } catch (error) {
     console.error('Error deleting folktale:', error);
     res.status(500).json({ message: 'Server error' });
