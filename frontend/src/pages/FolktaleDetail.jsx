@@ -34,7 +34,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
         setSimilarFolktales(filteredFolktales);
       } catch (err) {
         console.error('Error fetching similar legends:', err);
-        setError('Failed to load similar legends.');
+        setError(('Failed to load similar legends.'));
       } finally {
         setIsLoading(false);
       }
@@ -86,7 +86,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
           className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide"
           style={{ scrollSnapType: 'x mandatory' }}
         >
-          {similarFolktales.map((folktale) => (
+          {similarFolktales.map((folktale) =>Uncaught SyntaxError: Unexpected token ')' (
             <div
               key={folktale._id}
               className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300"
@@ -145,10 +145,13 @@ function FolktaleDetail() {
   const token = localStorage.getItem('token');
   const commentSectionRef = useRef(null);
 
-  // Generate share URL
+  // Generate share URL and metadata
   const shareUrl = `${window.location.origin}/folktale/${id}`;
-  const shareTitle = folktale?.title || 'Check out this folktale!';
-  const shareDescription = folktale?.content?.slice(0, 160).replace(/<[^>]+>/g, '') || 'Discover an amazing folktale from around the world!';
+  const shareTitle = folktale?.title || 'Discover a Fascinating Folktale!';
+  const shareDescription = folktale?.content
+    ? `${folktale.content.replace(/<[^>]+>/g, '').slice(0, 160)}... Read more at ${window.location.origin}!`
+    : 'Explore a captivating folktale from around the world. Dive into the story now!';
+  const shareImage = folktale?.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale+Image';
 
   useEffect(() => {
     const fetchFolktaleAndBookmarks = async () => {
@@ -306,6 +309,7 @@ function FolktaleDetail() {
         });
       } catch (err) {
         console.error('Error sharing:', err);
+        setShowShareModal(true);
       }
     } else {
       setShowShareModal(true);
@@ -349,17 +353,19 @@ function FolktaleDetail() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fade-in">
       <Helmet>
-        <title>{folktale.title}</title>
+        <title>{shareTitle}</title>
         <meta name="description" content={shareDescription} />
-        <meta property="og:title" content={folktale.title} />
+        <meta property="og:title" content={shareTitle} />
         <meta property="og:description" content={shareDescription} />
-        <meta property="og:image" content={folktale.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale'} />
+        <meta property="og:image" content={shareImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:url" content={shareUrl} />
         <meta property="og:type" content="article" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={folktale.title} />
+        <meta name="twitter:title" content={shareTitle} />
         <meta name="twitter:description" content={shareDescription} />
-        <meta name="twitter:image" content={folktale.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale'} />
+        <meta name="twitter:image" content={shareImage} />
       </Helmet>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar closeOnClick pauseOnHover theme="light" />
 
@@ -601,6 +607,19 @@ function FolktaleDetail() {
                   Close
                 </button>
               </div>
+              <div className="mb-4">
+                <img
+                  src={shareImage}
+                  alt={shareTitle}
+                  className="w-full h-40 object-cover rounded-lg mb-2"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/800x400?text=Folktale+Image';
+                  }}
+                />
+                <p className="text-lg font-semibold text-amber-900">{shareTitle}</p>
+                <p className="text-sm text-gray-600">{shareDescription}</p>
+              </div>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <FacebookShareButton url={shareUrl} quote={shareTitle}>
                   <FacebookIcon size={48} round />
@@ -608,10 +627,10 @@ function FolktaleDetail() {
                 <TwitterShareButton url={shareUrl} title={shareTitle}>
                   <TwitterIcon size={48} round />
                 </TwitterShareButton>
-                <WhatsappShareButton url={shareUrl} title={shareTitle}>
+                <WhatsappShareButton url={shareUrl} title={`${shareTitle}\n${shareDescription}`}>
                   <WhatsappIcon size={48} round />
                 </WhatsappShareButton>
-                <EmailShareButton url={shareUrl} subject={shareTitle} body={shareDescription}>
+                <EmailShareButton url={shareUrl} subject={shareTitle} body={`${shareDescription}\n\nRead more: ${shareUrl}`}>
                   <EmailIcon size={48} round />
                 </EmailShareButton>
               </div>
