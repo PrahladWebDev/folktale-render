@@ -441,8 +441,8 @@ function FolktaleDetail() {
           </div>
         </div>
 
-        <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
-
+{/*         <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
+ */}
         {token && (
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
             <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
@@ -472,6 +472,10 @@ function FolktaleDetail() {
           </div>
         )}
 
+        
+        <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
+
+        
         {showComments && (
           <div
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out"
