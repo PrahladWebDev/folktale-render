@@ -32,8 +32,8 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
         );
         setSimilarFolktales(filteredFolktales);
       } catch (err) {
-        console.error('Error fetching similar folktales:', err);
-        setError('Failed to load similar folktales.');
+        console.error('Error fetching similar legends:', err);
+        setError('Failed to load similar legends.');
       } finally {
         setIsLoading(false);
       }
@@ -52,7 +52,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   };
 
   if (isLoading) {
-    return <div className="text-center p-4 text-amber-900 font-caveat">Loading similar folktales...</div>;
+    return <div className="text-center p-4 text-amber-900 font-caveat">Loading similar legends...</div>;
   }
 
   if (error) {
@@ -62,7 +62,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   if (similarFolktales.length === 0) {
     return (
       <div className="text-center p-4 text-gray-600 font-caveat">
-        No similar folktales found in this genre.
+        No similar legend found in this genre.
       </div>
     );
   }
@@ -70,7 +70,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   return (
     <div className="my-10">
       <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-        Similar Folktales
+         You might also like:
       </h2>
       <div className="relative">
         <button
@@ -155,7 +155,7 @@ function FolktaleDetail() {
         ]);
 
         if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
-          throw new Error('Invalid folktale data received');
+          throw new Error('Invalid legend data received');
         }
         setFolktale(folktaleResponse.data);
 
@@ -193,13 +193,13 @@ function FolktaleDetail() {
           }
         }
       } catch (err) {
-        console.error('Error fetching folktale:', err);
+        console.error('Error fetching legend:', err);
         if (err.response?.status === 404) {
           setError('Folktale not found.');
         } else if (err.code === 'ERR_NETWORK') {
           setError('Network error. Please check your connection and try again.');
         } else {
-          setError('Failed to load folktale. Please try again later.');
+          setError('Failed to load legend. Please try again later.');
         }
       } finally {
         setIsLoading(false);
@@ -211,7 +211,7 @@ function FolktaleDetail() {
 
   const handleRate = async () => {
     if (!token) {
-      toast.warning('Please log in to rate this folktale.');
+      toast.warning('Please log in to rate this legend.');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
@@ -246,7 +246,7 @@ function FolktaleDetail() {
 
   const handleBookmark = async () => {
     if (!token) {
-      toast.warning('Please log in to bookmark this folktale.');
+      toast.warning('Please log in to bookmark this legend.');
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
@@ -265,7 +265,7 @@ function FolktaleDetail() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsBookmarked(true);
-        toast.success('Folktale bookmarked!');
+        toast.success('Legend bookmarked!');
       }
     } catch (error) {
       console.error('Bookmark error:', error);
@@ -293,7 +293,7 @@ function FolktaleDetail() {
   if (isLoading) {
     return (
       <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulse">
-        Loading Folktale...
+        Loading Legend...
       </div>
     );
   }
@@ -309,7 +309,7 @@ function FolktaleDetail() {
   if (!folktale) {
     return (
       <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">
-        No folktale data available.
+        No Legend data available.
       </div>
     );
   }
@@ -407,7 +407,7 @@ function FolktaleDetail() {
 
         {folktale.ageGroup === 'Adults' && (
           <div className="bg-amber-100 text-amber-800 p-4 rounded-lg border-2 border-amber-200 mb-6 text-base animate-shake">
-            <p><strong className="text-amber-900">⚠️ Warning:</strong> This folktale contains content intended for adult readers.</p>
+            <p><strong className="text-amber-900">⚠️ Warning:</strong> This Legend contains content intended for adult readers.</p>
           </div>
         )}
 
