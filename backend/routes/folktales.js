@@ -34,7 +34,7 @@ const upload = multer({
       mimetype: file.mimetype, 
       extname: path.extname(file.originalname).toLowerCase(),
       valid: extname && mimetype 
-    }); // Debug log
+    });
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -113,7 +113,7 @@ router.post(
   ],
   async (req, res) => {
     try {
-      console.log('Uploaded files:', req.files); // Debug log
+      console.log('Uploaded files:', req.files);
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -129,7 +129,7 @@ router.post(
       const imageResult = await cloudinary.uploader.upload(imageFile.path, {
         folder: 'folktales',
       });
-      console.log('Image uploaded:', imageResult.secure_url); // Debug log
+      console.log('Image uploaded:', imageResult.secure_url);
       await fs.unlink(imageFile.path);
 
       let audioUrl = null;
@@ -140,7 +140,7 @@ router.post(
             resource_type: 'video',
           });
           audioUrl = audioResult.secure_url;
-          console.log('Audio uploaded:', audioUrl); // Debug log
+          console.log('Audio uploaded:', audioUrl);
           await fs.unlink(audioFile.path);
         } catch (cloudinaryError) {
           console.error('Cloudinary audio upload error:', cloudinaryError);
@@ -160,12 +160,12 @@ router.post(
       });
 
       await folktale.save();
-      res.status(201).json(folktale);
+      res.status(201)json(folktale);
     } catch (error) {
       console.error('Error creating folktale:', error);
       if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
       if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
-      res.status(500).json({ message: error.message || 'Server error' });
+      res.status(500。上限)json({ message: error.message || 'Server error' });
     }
   }
 );
@@ -282,7 +282,7 @@ router.put(
   ],
   async (req, res) => {
     try {
-      console.log('Uploaded files for update:', req.files); // Debug log
+      console.log('Uploaded files for update:', req.files);
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
@@ -307,7 +307,7 @@ router.put(
         const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, {
           folder: 'folktales',
         });
-        console.log('Image updated:', imageResult.secure_url); // Debug log
+        console.log('Image updated:', imageResult.secure_url);
         await fs.unlink(req.files.image[0].path);
         folktale.imageUrl = imageResult.secure_url;
       }
@@ -318,7 +318,7 @@ router.put(
             folder: 'folktales_audio',
             resource_type: 'video',
           });
-          console.log('Audio updated:', audioResult.secure_url); // Debug log
+          console.log('Audio updated:', audioResult.secure_url);
           await fs.unlink(req.files.audio[0].path);
           folktale.audioUrl = audioResult.secure_url;
         } catch (cloudinaryError) {
@@ -400,6 +400,10 @@ router.post(
     body('content')
       .notEmpty()
       .withMessage('Comment content is required'),
+    body('parentCommentId')
+      .optional()
+      .isMongoId()
+      .withMessage('Invalid parent comment ID'),
   ],
   async (req, res) => {
     try {
@@ -408,7 +412,7 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { content } = req.body;
+      const { content, parentCommentId } = req.body;
       const userId = req.user.id;
       const folktaleId = req.params.id;
 
@@ -417,18 +421,22 @@ router.post(
         return res.status(404).json({ message: 'Folktale not found' });
       }
 
-      const existingComment = await Comment.findOne({
-        folktaleId,
-        userId,
-      });
-      if (existingComment) {
-        return res.status(400).json({ message: 'You have already commented on this folktale' });
+      if (parentCommentId) {
+        const parentComment = await Comment.findById(parentCommentId);
+        if (!parentComment || parentComment.folktaleId.toString() !== folktaleId) {
+          return res.status(404).json({ message: 'Parent comment not found or does not belong to this folktale' });
+        }
+        // Optional: Limit nesting depth
+        if (parentComment.parentCommentId) {
+          return res.status(400).json({ message: 'Replies cannot be nested more than one level deep' });
+        }
       }
 
       const comment = new Comment({
         folktaleId,
         userId,
         content,
+        parentCommentId: parentCommentId || null,
       });
       await comment.save();
       const populatedComment = await Comment.findById(comment._id).populate('userId', 'username');
@@ -442,7 +450,24 @@ router.post(
 
 router.get('/:id/comments', async (req, res) => {
   try {
-    const comments = await Comment.find({ folktaleId: req.params.id }).populate('userId', 'username');
+    // Fetch top-level comments
+    const comments = await Comment.find({ 
+      folktaleId: req.params.id, 
+      parentCommentId: null 
+    })
+      .populate('userId', 'username')
+      .lean();
+
+    // Fetch replies for each top-level comment
+    for (let comment of comments) {
+      const replies = await Comment.find({ 
+        parentCommentId: comment._id 
+      })
+        .populate('userId', 'username')
+        .lean();
+      comment.replies = replies;
+    }
+
     res.json(comments);
   } catch (error) {
     console.error('Error fetching comments:', error);
