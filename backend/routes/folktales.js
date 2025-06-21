@@ -166,7 +166,7 @@ router.post(
 );
 
 router.get('/', async (req, res) => {
-  const { page = 1, limit = 10, region, genre, ageGroup, search } = req.query;
+  const { page = 1, limit = 12, region, genre, ageGroup, search } = req.query;
   const query = {};
   if (region) query.region = region;
   if (genre) query.genre = genre;
