@@ -413,7 +413,58 @@ function FolktaleDetail() {
 
         <div className="my-10">
           <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-            {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'}
+{/*             {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'} */}
+            {
+  (() => {
+    switch (folktale.genre) {
+      case 'Conspiracy Theory':
+        return 'The Theory';
+      case 'Fable':
+        return 'The Fable';
+      case 'Myth':
+        return 'The Myth';
+      case 'Legend':
+        return 'The Legend';
+      case 'Fairy Tale':
+        return 'The Fairy Tale';
+      case 'Horror':
+        return 'The Horror Story';
+      case 'Fantasy':
+        return 'The Fantasy';
+      case 'Adventure':
+        return 'The Adventure';
+      case 'Mystery':
+        return 'The Mystery';
+      case 'Historical':
+        return 'The Historical Tale';
+      case 'Ghost Story':
+        return 'The Ghost Story';
+      case 'Supernatural':
+        return 'The Supernatural Tale';
+      case 'Tragedy':
+        return 'The Tragedy';
+      case 'Moral Tale':
+        return 'The Moral Tale';
+      case 'Urban Legend':
+        return 'The Urban Legend';
+      case 'Comedy':
+        return 'The Comedy';
+      case 'Parable':
+        return 'The Parable';
+      case 'Epic':
+        return 'The Epic';
+      case 'Romance':
+        return 'The Romance';
+      case 'Unsolved Mysteries':
+        return 'The Mystery';
+      case 'Supernatural/Paranormal Entities':
+        return 'The Entity';
+      default:
+        return 'The Story';
+    }
+  })()
+}
+
           </h2>
           <div className="text-lg leading-relaxed">
             {token ? (
