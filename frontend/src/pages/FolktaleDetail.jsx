@@ -4,8 +4,10 @@ import axios from 'axios';
 import CommentSection from '../components/CommentSection';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { BsBookmark, BsBookmarkFill, BsChat, BsArrowLeft, BsArrowRight } from 'react-icons/bs';
+import { BsBookmark, BsBookmarkFill, BsChat, BsArrowLeft, BsArrowRight, BsShare } from 'react-icons/bs';
 import { FaStar } from 'react-icons/fa';
+import { Helmet } from 'react-helmet-async';
+import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, EmailShareButton, FacebookIcon, TwitterIcon, WhatsappIcon, EmailIcon } from 'react-share';
 
 // SimilarFolktales Component
 function SimilarFolktales({ genre, currentFolktaleId }) {
@@ -26,7 +28,6 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
             limit: 10,
           },
         });
-        // Filter out the current folktale
         const filteredFolktales = response.data.folktales.filter(
           (folktale) => folktale._id !== currentFolktaleId
         );
@@ -70,7 +71,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   return (
     <div className="my-10">
       <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-         You might also like:
+        You might also like:
       </h2>
       <div className="relative">
         <button
@@ -140,8 +141,14 @@ function FolktaleDetail() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [showShareModal, setShowShareModal] = useState(false);
   const token = localStorage.getItem('token');
   const commentSectionRef = useRef(null);
+
+  // Generate share URL
+  const shareUrl = `${window.location.origin}/folktale/${id}`;
+  const shareTitle = folktale?.title || 'Check out this folktale!';
+  const shareDescription = folktale?.content?.slice(0, 160).replace(/<[^>]+>/g, '') || 'Discover an amazing folktale from around the world!';
 
   useEffect(() => {
     const fetchFolktaleAndBookmarks = async () => {
@@ -159,7 +166,6 @@ function FolktaleDetail() {
         }
         setFolktale(folktaleResponse.data);
 
-        // Calculate total comment count (top-level + replies)
         const comments = commentsResponse.data || [];
         const totalComments = comments.reduce(
           (count, comment) => count + 1 + (comment.replies?.length || 0),
@@ -290,6 +296,28 @@ function FolktaleDetail() {
     return true;
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareDescription,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      setShowShareModal(true);
+    }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Link copied to clipboard!');
+    setShowShareModal(false);
+  };
+
   if (isLoading) {
     return (
       <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulse">
@@ -320,6 +348,19 @@ function FolktaleDetail() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fade-in">
+      <Helmet>
+        <title>{folktale.title}</title>
+        <meta name="description" content={shareDescription} />
+        <meta property="og:title" content={folktale.title} />
+        <meta property="og:description" content={shareDescription} />
+        <meta property="og:image" content={folktale.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale'} />
+        <meta property="og:url" content={shareUrl} />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={folktale.title} />
+        <meta name="twitter:description" content={shareDescription} />
+        <meta name="twitter:image" content={folktale.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale'} />
+      </Helmet>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar closeOnClick pauseOnHover theme="light" />
 
       <div className="bg-white rounded-lg p-6 sm:p-8 shadow-md border-2 border-amber-200">
@@ -364,6 +405,14 @@ function FolktaleDetail() {
                   {commentCount}
                 </span>
               )}
+            </button>
+            <button
+              onClick={handleShare}
+              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
+              title="Share folktale"
+              aria-label="Share folktale"
+            >
+              <BsShare className="text-2xl" />
             </button>
           </div>
         </div>
@@ -413,58 +462,32 @@ function FolktaleDetail() {
 
         <div className="my-10">
           <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-{/*             {folktale.genre === 'Conspiracy Theory' ? 'The Theory' : 'The Story'} */}
-            {
-  (() => {
-    switch (folktale.genre) {
-      case 'Conspiracy Theory':
-        return 'The Theory';
-      case 'Fable':
-        return 'The Fable';
-      case 'Myth':
-        return 'The Myth';
-      case 'Legend':
-        return 'The Legend';
-      case 'Fairy Tale':
-        return 'The Fairy Tale';
-      case 'Horror':
-        return 'The Horror Story';
-      case 'Fantasy':
-        return 'The Fantasy';
-      case 'Adventure':
-        return 'The Adventure';
-      case 'Mystery':
-        return 'The Mystery';
-      case 'Historical':
-        return 'The Historical Tale';
-      case 'Ghost Story':
-        return 'The Ghost Story';
-      case 'Supernatural':
-        return 'The Supernatural Tale';
-      case 'Tragedy':
-        return 'The Tragedy';
-      case 'Moral Tale':
-        return 'The Moral Tale';
-      case 'Urban Legend':
-        return 'The Urban Legend';
-      case 'Comedy':
-        return 'The Comedy';
-      case 'Parable':
-        return 'The Parable';
-      case 'Epic':
-        return 'The Epic';
-      case 'Romance':
-        return 'The Romance';
-      case 'Unsolved Mysteries':
-        return 'The Mystery';
-      case 'Supernatural/Paranormal Entities':
-        return 'The Entity';
-      default:
-        return 'The Story';
-    }
-  })()
-}
-
+            {(() => {
+              switch (folktale.genre) {
+                case 'Conspiracy Theory': return 'The Theory';
+                case 'Fable': return 'The Fable';
+                case 'Myth': return 'The Myth';
+                case 'Legend': return 'The Legend';
+                case 'Fairy Tale': return 'The Fairy Tale';
+                case 'Horror': return 'The Horror Story';
+                case 'Fantasy': return 'The Fantasy';
+                case 'Adventure': return 'The Adventure';
+                case 'Mystery': return 'The Mystery';
+                case 'Historical': return 'The Historical Tale';
+                case 'Ghost Story': return 'The Ghost Story';
+                case 'Supernatural': return 'The Supernatural Tale';
+                case 'Tragedy': return 'The Tragedy';
+                case 'Moral Tale': return 'The Moral Tale';
+                case 'Urban Legend': return 'The Urban Legend';
+                case 'Comedy': return 'The Comedy';
+                case 'Parable': return 'The Parable';
+                case 'Epic': return 'The Epic';
+                case 'Romance': return 'The Romance';
+                case 'Unsolved Mysteries': return 'The Mystery';
+                case 'Supernatural/Paranormal Entities': return 'The Entity';
+                default: return 'The Story';
+              }
+            })()}
           </h2>
           <div className="text-lg leading-relaxed">
             {token ? (
@@ -492,8 +515,6 @@ function FolktaleDetail() {
           </div>
         </div>
 
-{/*         <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
- */}
         {token && (
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
             <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
@@ -523,10 +544,8 @@ function FolktaleDetail() {
           </div>
         )}
 
-        
         <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
 
-        
         {showComments && (
           <div
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out"
@@ -559,6 +578,58 @@ function FolktaleDetail() {
                 });
               }}
             />
+          </div>
+        )}
+
+        {showShareModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-modal-title"
+          >
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 id="share-modal-title" className="text-xl font-bold text-amber-900">
+                  Share this Folktale
+                </h3>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-amber-900 hover:text-amber-700 text-xl font-bold"
+                  aria-label="Close share modal"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <FacebookShareButton url={shareUrl} quote={shareTitle}>
+                  <FacebookIcon size={48} round />
+                </FacebookShareButton>
+                <TwitterShareButton url={shareUrl} title={shareTitle}>
+                  <TwitterIcon size={48} round />
+                </TwitterShareButton>
+                <WhatsappShareButton url={shareUrl} title={shareTitle}>
+                  <WhatsappIcon size={48} round />
+                </WhatsappShareButton>
+                <EmailShareButton url={shareUrl} subject={shareTitle} body={shareDescription}>
+                  <EmailIcon size={48} round />
+                </EmailShareButton>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={shareUrl}
+                  readOnly
+                  className="flex-1 p-2 border-2 border-amber-200 rounded-l-md text-gray-600"
+                />
+                <button
+                  onClick={copyLink}
+                  className="bg-amber-600 text-white px-4 py-2 rounded-r-md hover:bg-amber-700"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
