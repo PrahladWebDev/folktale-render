@@ -271,6 +271,7 @@ function FilterBar() {
           <option value="Parable">Parable</option>
           <option value="Epic">Epic</option>
           <option value="Romance">Romance</option>
+          <option value="Unsolved Mysteries">Unsolved Mysteries</option>
         </select>
       </div>
 
