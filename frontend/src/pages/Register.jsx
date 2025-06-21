@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Add useEffect for cleanup
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchBar from '../components/SearchBar';
@@ -9,10 +9,39 @@ function Register() {
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null); // New state for preview
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const navigate = useNavigate();
+
+  // Handle image selection and preview
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setProfileImage(file);
+
+    // Clean up previous preview
+    if (previewImage) {
+      URL.revokeObjectURL(previewImage);
+    }
+
+    // Set new preview
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setPreviewImage(imageUrl);
+    } else {
+      setPreviewImage(null);
+    }
+  };
+
+  // Clean up preview URL on component unmount
+  useEffect(() => {
+    return () => {
+      if (previewImage) {
+        URL.revokeObjectURL(previewImage);
+      }
+    };
+  }, [previewImage]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -20,12 +49,10 @@ function Register() {
     setError('');
     setUploadProgress(0);
 
-    // Normalize inputs: trim spaces and convert email/username to lowercase
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedUsername = username.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    // Validate inputs
     if (!normalizedEmail || !normalizedUsername || !normalizedPassword) {
       setError('All fields are required');
       setIsLoading(false);
@@ -44,7 +71,6 @@ function Register() {
       return;
     }
 
-    // Validate image
     if (profileImage) {
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(profileImage.type)) {
@@ -167,13 +193,23 @@ function Register() {
             <input
               type="file"
               accept="image/jpeg,image/jpg,image/png"
-              onChange={(e) => setProfileImage(e.target.files[0])}
+              onChange={handleImageChange} // Updated handler
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300"
               disabled={isLoading}
             />
             <p className="mt-1 text-xs text-gray-500">
               JPEG, JPG, or PNG (max 5MB)
             </p>
+            {/* Image Preview */}
+            {previewImage && (
+              <div className="mt-4 flex justify-center">
+                <img
+                  src={previewImage}
+                  alt="Profile Preview"
+                  className="w-32 h-32 object-cover rounded-full border-2 border-amber-200 shadow-md"
+                />
+              </div>
+            )}
           </div>
           {isLoading && uploadProgress > 0 && (
             <div className="mb-6">
@@ -188,7 +224,7 @@ function Register() {
               </p>
             </div>
           )}
-{/*           <div className="mb-6">
+          {/*           <div className="mb-6">
             <label className="flex items-center">
               <input
                 type="checkbox"
