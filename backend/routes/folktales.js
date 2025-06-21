@@ -160,12 +160,12 @@ router.post(
       });
 
       await folktale.save();
-      res.status(201)json(folktale);
+      res.status(201).json(folktale);
     } catch (error) {
       console.error('Error creating folktale:', error);
       if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
       if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
-      res.status(500。上限)json({ message: error.message || 'Server error' });
+      res.status(500).json({ message: error.message || 'Server error' });
     }
   }
 );
@@ -312,7 +312,7 @@ router.put(
         folktale.imageUrl = imageResult.secure_url;
       }
 
-      if (req.files?.audio?.[0]) {
+      if (req.files?. BodyFiles?.audio?.[0]) {
         try {
           const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
             folder: 'folktales_audio',
