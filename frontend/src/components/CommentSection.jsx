@@ -276,11 +276,11 @@ const CommentSection = forwardRef(({ folktaleId, onCommentPosted }, ref) => {
             </div>
           )}
           <div className="flex items-end gap-2">
-            {replyingTo && (
+{/*             {replyingTo && (
               <span className="text-lg text-amber-900 font-semibold bg-amber-100 px-2 py-3 rounded-md">
                 @{replyingTo.username}
               </span>
-            )}
+            )} */}
             <textarea
               ref={commentInputRef}
               id="comment-input"
