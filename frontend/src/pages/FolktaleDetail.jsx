@@ -511,7 +511,7 @@ function FolktaleDetail() {
                   <p className="text-lg text-gray-600 mb-4 font-semibold">Want to read the full story?</p>
                   <button
                     className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                    onClick={() => toast.warning('Please log in to read the full story.')}
+                    onClick={() => navigate('/login')}
                   >
                     Log in or Register
                   </button>
