@@ -496,27 +496,20 @@ function FolktaleDetail() {
             })()}
           </h2>
           <div className="text-lg leading-relaxed">
-            {token ? (
-              <div
-                className="mb-5 prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: folktale.content }}
-              />
-            ) : (
-              <>
-                <div
-                  className="mb-5 prose prose-lg max-w-none"
-                  dangerouslySetInnerHTML={{ __html: folktale.content.slice(0, 300) + '...' }}
-                />
-                <div className="text-center p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
-                  <p className="text-lg text-gray-600 mb-4 font-semibold">Want to read the full story?</p>
-                  <button
-                    className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                    onClick={() => navigate('/login')}
-                  >
-                    Log in or Register
-                  </button>
-                </div>
-              </>
+            <div
+              className="mb-5 prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: folktale.content }}
+            />
+            {!token && (
+              <div className="text-center p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
+                <p className="text-lg text-gray-600 mb-4 font-semibold">Want to read the full story?</p>
+                <button
+                  className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                  onClick={() => toast.warning('Please log in to read the full story.')}
+                >
+                  Log in or Register
+                </button>
+              </div>
             )}
           </div>
         </div>
