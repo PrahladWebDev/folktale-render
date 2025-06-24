@@ -5,14 +5,14 @@ import axios from 'axios';
 import CommentSection from '../components/CommentSection';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { BsBookmark, BsBookmarkFill, BsChat, BsArrowLeft, BsArrowRight, BsShare, BsDownload } from 'react-icons/bs'; // Added BsDownload
+import { BsBookmark, BsBookmarkFill, BsChat, BsArrowLeft, BsArrowRight, BsShare, BsDownload } from 'react-icons/bs';
 import { FaStar } from 'react-icons/fa';
 import { Helmet } from 'react-helmet-async';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, EmailShareButton, FacebookIcon, TwitterIcon, WhatsappIcon, EmailIcon } from 'react-share';
-import jsPDF from 'jspdf'; // Added jsPDF
-import * as htmlToImage from 'html-to-image'; // Added html-to-image
+import jsPDF from 'jspdf';
+import * as htmlToImage from 'html-to-image';
 
-// SimilarFolktales Component (unchanged)
+// SimilarFolktales Component
 function SimilarFolktales({ genre, currentFolktaleId }) {
   const [similarFolktales, setSimilarFolktales] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,24 +75,22 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
           {similarFolktales.map((folktale) => (
             <div
               key={folktale._id}
-              className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300
-              onClick={() => navigate(`/folktale/${id(folktale._id)}`)
+              className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300"
+              onClick={() => navigate(`/folktale/${folktale._id}`)} // Fixed navigation
             >
               <img
                 src={folktale.imageUrl}
                 alt={folktale.title}
-                className="folktale-img w-full h-40 object-cover rounded-tale-tale-t-lg
+                className="w-full h-40 object-cover rounded-t-lg" // Fixed className, removed invalid class
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/256x160?text=folktale+Image+No+Image';
+                  e.target.src = 'https://via.placeholder.com/256x160?text=No+Image'; // Fixed URL
                 }}
               />
-              <div class="p-4">
-                <h3 class="text-lg font-bold text-amber-900 truncate">{folktale.title}</h3>
-                <p className="text-sm text-gray-600">Region: </p>
-                <p class="text-sm text-gray-600">{folktale.region}</p>
-                <p className="text-sm text-gray-600">Age Group: </p>
-                <p class="text-gray-600">{folktale.ageGroup}</p>
+              <div className="p-4"> {/* Fixed className */}
+                <h3 className="text-lg font-bold text-amber-900 truncate">{folktale.title}</h3> {/* Fixed className */}
+                <p className="text-sm text-gray-600">Region: {folktale.region}</p> {/* Unified className */}
+                <p className="text-sm text-gray-600">Age Group: {folktale.ageGroup}</p> {/* Unified className */}
                 <div className="flex items-center mt-2">
                   <FaStar className="text-amber-600 mr-1" />
                   <span className="text-sm text-gray-600">
@@ -117,7 +115,7 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   );
 }
 
-// FolktaleDetail Component
+// FolktaleDetail Component (unchanged from previous solution, included for completeness)
 function FolktaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -132,9 +130,8 @@ function FolktaleDetail() {
   const [showShareModal, setShowShareModal] = useState(false);
   const token = localStorage.getItem('token');
   const commentSectionRef = useRef(null);
-  const imageRef = useRef(null); // Ref for image to convert to data URL
+  const imageRef = useRef(null);
 
-  // Share URL and metadata
   const shareUrl = `${window.location.origin}/folktale/${id}`;
   const shareTitle = folktale?.title || 'Discover a Fascinating Folktale!';
   const shareDescription = folktale?.content
@@ -192,7 +189,6 @@ function FolktaleDetail() {
     fetchFolktaleAndBookmarks();
   }, [id, token, navigate]);
 
-  // New: Handle PDF Download
   const handleDownloadPDF = async () => {
     if (!token) {
       toast.warning('Please log in to download the legend as PDF.');
@@ -208,15 +204,12 @@ function FolktaleDetail() {
       const maxWidth = pageWidth - 2 * margin;
       let yOffset = margin;
 
-      // Colors matching UI (amber-900: #784F17, gray-600: #4B5563, amber-200: #FDE68A)
       const amber900 = [120, 79, 23];
       const gray600 = [75, 85, 99];
       const amber200 = [253, 230, 138];
 
-      // Set font (Helvetica as fallback; use custom font-caveat if available)
       doc.setFont('Helvetica', 'normal');
 
-      // Add image if available
       if (imageRef.current && folktale.imageUrl) {
         try {
           const imgData = await htmlToImage.toPng(imageRef.current);
@@ -227,18 +220,15 @@ function FolktaleDetail() {
           yOffset += imgHeight + 15;
         } catch (imgError) {
           console.error('Error adding image to PDF:', imgError);
-          // Fallback: Skip image if it fails to load
         }
       }
 
-      // Add title
       doc.setFontSize(24);
       doc.setTextColor(...amber900);
       const titleLines = doc.splitTextToSize(folktale.title, maxWidth);
       doc.text(titleLines, margin, yOffset);
       yOffset += titleLines.length * 10 + 15;
 
-      // Add metadata
       doc.setFontSize(12);
       doc.setTextColor(...gray600);
       doc.text(`Region: ${folktale.region}`, margin, yOffset);
@@ -250,9 +240,8 @@ function FolktaleDetail() {
       doc.text(`Rating: ${folktale.ratings?.length ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1) : 'No ratings'}`, margin, yOffset);
       yOffset += 20;
 
-      // Add content
       doc.setFontSize(14);
-      const plainText = folktale.content.replace(/<[^>]+>/g, ''); // Strip HTML tags
+      const plainText = folktale.content.replace(/<[^>]+>/g, '');
       const contentLines = doc.splitTextToSize(plainText, maxWidth);
       let pageCount = 1;
 
@@ -261,7 +250,6 @@ function FolktaleDetail() {
           doc.addPage();
           pageCount++;
           yOffset = margin;
-          // Add page header
           doc.setFontSize(12);
           doc.setTextColor(...gray600);
           doc.text(`Page ${pageCount}`, pageWidth - margin - 20, yOffset);
@@ -273,14 +261,12 @@ function FolktaleDetail() {
         yOffset += 10;
       });
 
-      // Add footer with amber-200 accent
       doc.setDrawColor(...amber200);
       doc.line(margin, pageHeight - margin, pageWidth - margin, pageHeight - margin);
       doc.setFontSize(10);
       doc.setTextColor(...gray600);
       doc.text(`Generated from ${window.location.origin}`, margin, pageHeight - margin + 10);
 
-      // Save PDF
       doc.save(`${folktale.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
       toast.success('PDF downloaded successfully!');
     } catch (error) {
@@ -451,7 +437,6 @@ function FolktaleDetail() {
             >
               <BsShare className="text-2xl" />
             </button>
-            {/* New: Download Button */}
             <button
               onClick={handleDownloadPDF}
               className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200 transform hover:scale-105"
@@ -465,7 +450,7 @@ function FolktaleDetail() {
 
         <div className="max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden shadow-lg border-2 border-amber-200">
           <img
-            ref={imageRef} // Attach ref for PDF image capture
+            ref={imageRef}
             src={folktale.imageUrl}
             alt={folktale.title}
             className="w-full h-auto object-cover"
