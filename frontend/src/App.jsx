@@ -1,6 +1,6 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./ThemeContext.jsx";
+import { ThemeProvider } from "./ThemeContext";
 import Home from "./pages/Home";
 import FolktaleDetail from "./pages/FolktaleDetail";
 import Login from "./pages/Login";
