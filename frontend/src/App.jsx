@@ -1,5 +1,6 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./ThemeContext"; // Import ThemeProvider
+import { ThemeProvider } from "./ThemeContext.jsx";
 import Home from "./pages/Home";
 import FolktaleDetail from "./pages/FolktaleDetail";
 import Login from "./pages/Login";
@@ -12,7 +13,7 @@ import Navbar from "./components/Navbar";
 import MapFolktaleExplorer from "./components/MapFilter";
 import BookmarkedFolktale from "./pages/BookmarkedFolktale";
 import Profile from './components/Profile';
-import './App.css'; // Import global styles
+import './styles.css';
 
 function App() {
   return (
