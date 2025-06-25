@@ -197,7 +197,7 @@ function Profile() {
       >
         <div className="flex justify-center mb-6">
           <motion.div whileHover={{ scale: 1.1 }} className="relative">
-            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-4 border-amber-200 overflow-hidden">
+            <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 overflow-hidden">
               <img
                 src={user.profileImageUrl || DEFAULT_PROFILE_IMAGE}
                 alt="Profile"
@@ -209,7 +209,7 @@ function Profile() {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-1"
+                className="absolute -top-2 -right-2 bg-amber-600 text-white rounded-full p-1"
                 title="Admin"
               >
                 <FaCrown className="text-xs" />
@@ -224,7 +224,7 @@ function Profile() {
             className="text-3xl font-bold text-amber-900 text-center flex items-center justify-center gap-3"
           >
             <FaUserEdit className="text-amber-700" />
-            {user.username || "Profile"}
+            {user.username || "My Profile"}
           </motion.h2>
 
           {message && (
@@ -244,12 +244,12 @@ function Profile() {
           {renderError('password')}
           {renderError('profileImage')}
 
-          <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4 border-b border-amber-200 space-y-3">
+          <motion.div variants={itemVariants} className="bg-amber-50 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-3 text-gray-700">
               <FaEnvelope className="text-amber-700 flex-shrink-0" />
               <div>
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="font-semibold">{user.email}</p>
+                <p className="text-xs text-amber-600">Email</p>
+                <p className="font-medium">{user.email}</p>
               </div>
             </div>
 
@@ -257,11 +257,11 @@ function Profile() {
               {user.isAdmin ? (
                 <FaUserShield className="text-amber-700 flex-shrink-0" />
               ) : (
-                <FaUser className="text-amber-700 flex-shrink-0 />
+                <FaUser className="text-amber-700 flex-shrink-0" />
               )}
               <div>
-                <p className="text-xs text-gray-500">Role</p>
-                <p className="font-semibold">{user.isAdmin ? "Administrator" : "User"}</p>
+                <p className="text-xs text-amber-600">Role</p>
+                <p className="font-medium">{user.isAdmin ? "Administrator" : "Standard User"}</p>
               </div>
             </div>
           </motion.div>
@@ -274,7 +274,7 @@ function Profile() {
               encType="multipart/form-data"
             >
               <motion.div variants={itemVariants}>
-                <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="username" className="block text-sm font-semibold text-amber-900 mb-2">
                   Username
                 </label>
                 <div className="relative">
@@ -298,7 +298,7 @@ function Profile() {
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-amber-900 mb-2">
                   New Password
                 </label>
                 <div className="relative">
@@ -319,12 +319,12 @@ function Profile() {
                   <FaKey className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  At least 8 characters with one uppercase letter and one number; leave blank to keep current password
+                  At least 8 characters, including one uppercase letter and one number; leave blank to keep current password
                 </p>
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="profileImage" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="profileImage" className="block text-sm font-semibold text-amber-900 mb-2">
                   Profile Image (Optional)
                 </label>
                 <div className="relative">
