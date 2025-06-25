@@ -72,8 +72,7 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit for image upload
   },
-}).single('image-upload');
-
+}).single('profileImage'); // Changed from 'image-upload' to 'profileImage'
 
 // Input validation middleware
 const validateRegister = [
