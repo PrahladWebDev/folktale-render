@@ -192,8 +192,8 @@ function Profile() {
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 200 }}
-        className="bg-white rounded-xl shadow-md border-2 border-amber-200 p-8 max-w-md w-full"
+        transition={{ duration: 0.3 }}
+        className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-8 max-w-md w-full"
       >
         <div className="flex justify-center mb-6">
           <motion.div whileHover={{ scale: 1.1 }} className="relative">
@@ -209,7 +209,7 @@ function Profile() {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-2"
+                className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-1"
                 title="Admin"
               >
                 <FaCrown className="text-xs" />
@@ -218,11 +218,11 @@ function Profile() {
           </motion.div>
         </div>
 
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
           <motion.h2
             variants={itemVariants}
-            className="text-3xl font-semibold text-amber-900 text-center flex items-center justify-center gap-3"
-            >
+            className="text-3xl font-bold text-amber-900 text-center flex items-center justify-center gap-3"
+          >
             <FaUserEdit className="text-amber-700" />
             {user.username || "Profile"}
           </motion.h2>
@@ -232,7 +232,7 @@ function Profile() {
               variants={itemVariants}
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
-              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-3 border-b-2 border-green-600"
+              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-3 border-b-2 border-green-200"
             >
               <FaCheckCircle className="text-green-600 flex-shrink-0" />
               <span>{message}</span>
@@ -244,7 +244,7 @@ function Profile() {
           {renderError('password')}
           {renderError('profileImage')}
 
-          <motion.div variants={itemVariants} className="bg-gray-100 rounded-lg border-2 p-4 space-y-3">
+          <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4 border-b border-amber-200 space-y-3">
             <div className="flex items-center gap-3 text-gray-700">
               <FaEnvelope className="text-amber-700 flex-shrink-0" />
               <div>
@@ -257,7 +257,7 @@ function Profile() {
               {user.isAdmin ? (
                 <FaUserShield className="text-amber-700 flex-shrink-0" />
               ) : (
-                <FaUser className="text-amber-700 flex-shrink-0" />
+                <FaUser className="text-amber-700 flex-shrink-0 />
               )}
               <div>
                 <p className="text-xs text-gray-500">Role</p>
@@ -285,66 +285,65 @@ function Profile() {
                     value={formData.username}
                     onChange={handleInputChange}
                     className={`w-full p-3 rounded-md border-2 ${
-                      errors.find(err => 
-                        err.field === 'username') 
+                      errors.find(err => err.field === 'username') 
                         ? 'border-red-200' 
                         : 'border-amber-200'
-                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-blue-200 transition-all duration-300 placeholder-gray-400 pl-                    focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10`}
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400 pl-10`}
                     placeholder="Enter new username"
                     disabled={isUploading}
                   />
-                  <FaUser className="absolute left-3 top-3.5 text-amber-400" />
+                  <FaUser className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
-                <p className="text-xs text-gray-600 mt-1">At least 3 chars</p>
+                <p className="text-xs text-gray-500 mt-1">At least 3 characters</p>
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="password" className="block mb-2 font-semibold text-sm text-gray-800">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                   New Password
                 </label>
                 <div className="relative">
                   <input
                     type="password"
                     id="password"
-                    name="password}
+                    name="password"
                     value={formData.password}
                     onChange={handleInputChange}
                     className={`w-full p-3 rounded-md border-2 ${
-                      errors.find(err => 
-                        err.field === 'password') 
+                      errors.find(err => err.field === 'password') 
                         ? 'border-red-200' 
                         : 'border-amber-200'
-                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-blue-200 focus:ring-2 focus:ring-blue-amber-500 transition-all duration-300 placeholder-gray-400 pl-10"}
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400 pl-10`}
                     placeholder="Enter new password"
                     disabled={isUploading}
                   />
-                  <FaKey className="password" className="absolute left-3 top-3.5 text-amber-400" />
+                  <FaKey className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">At least 8 chars with one uppercase letter and one number; leave blank to keep current password</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  At least 8 characters with one uppercase letter and one number; leave blank to keep current password
+                </p>
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="profileImage" className="block mb-2 font-semibold text-sm text-gray-700">
-                  <p>Profile Image</p>
+                <label htmlFor="profileImage" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Profile Image (Optional)
                 </label>
                 <div className="relative">
                   <input
                     type="file"
-                    id="image-upload"
+                    id="profileImage"
                     name="profileImage"
                     accept="image/jpeg,image/jpg,image/png"
                     onChange={handleInputChange}
-                    className={`w-full p-3 rounded-md text-sm border-2 ${
-                      errors.find(err => 
-                        err.field === 'profileImage') 
+                    className={`w-full p-3 rounded-md border-2 ${
+                      errors.find(err => err.field === 'profileImage') 
                         ? 'border-red-200' 
                         : 'border-amber-200'
-                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-blue-200 transition-all duration-300`}
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300`}
                     disabled={isUploading}
                   />
-                  <FaImage className="absolute left-3 top-3.5 text-amber-400" />
+                  <FaImage className="absolute left-3 top-3.5 text-amber-600" />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">JPEG, JPG, or PNG (max 5MB)</p>
+                <p className="text-xs text-gray-500 mt-1">JPEG, JPG, or PNG (max 5MB)</p>
               </motion.div>
 
               {isUploading && (
