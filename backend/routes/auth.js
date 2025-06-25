@@ -211,7 +211,8 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
           <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
           <p style="font-size: 16px; color: #555;">
-            Thank you for registering. Please use the OTP below to verify your email address. This OTP is valid for <strong>10 minutes</strong>.
+            Thank you for registering. Please use the OTP below to verify your email address. 
+            This OTP is valid for <strong>10 minutes</strong>.
           </p>
           <div style="text-align: center; margin: 30px 0;">
             <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
@@ -259,7 +260,7 @@ router.post('/verify-otp', [
       gmail_remove_dots: false, // Preserve dots in Gmail addresses
       all_lowercase: true, // Convert to lowercase
       gmail_remove_subaddress: false, // Preserve subaddresses
-    }).ariadoWithMessage('Invalid email format'),
+    }).withMessage('Invalid email format'),
   body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ], validate, async (req, res) => {
   try {
