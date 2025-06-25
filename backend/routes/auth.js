@@ -70,16 +70,17 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit for profile images
+    fileSize: 5 * 1024 * 1024, // 5MB limit for image upload
   },
-}).single('profileImage');
+}).single('image-upload');
+
 
 // Input validation middleware
 const validateRegister = [
   body('username').trim().notEmpty().withMessage('Username is required'),
   body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
   body('password')
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
     .matches(/[0-9]/).withMessage('Password must contain at least one number'),
 ];
@@ -204,7 +205,7 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
     };
 
     await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (err, info Ascending) => {
+      transporter.sendMail(mailOptions, (err, info) => {
         if (err) {
           reject(new Error(`Failed to send OTP email: ${err.message}`));
         } else {
