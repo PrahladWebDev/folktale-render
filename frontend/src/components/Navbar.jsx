@@ -10,6 +10,8 @@ function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState({ username: null, profileImageUrl: "" });
   const token = localStorage.getItem("token");
+  // Default profile image URL
+  const DEFAULT_PROFILE_IMAGE = "https://via.placeholder.com/150/000000/FFFFFF/?text=User";
 
   useEffect(() => {
     const checkUser = async () => {
@@ -18,10 +20,10 @@ function Navbar() {
           const response = await axios.get("/api/auth/me", {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setIsAdmin(response.data.isAdmin);
+          setIsAdmin(response.data.user.isAdmin);
           setUser({
-            username: response.data.username,
-            profileImageUrl: response.data.profileImageUrl || "",
+            username: response.data.user.username,
+            profileImageUrl: response.data.user.profileImageUrl || DEFAULT_PROFILE_IMAGE,
           });
         } catch (error) {
           console.error("Error checking user:", error);
@@ -44,15 +46,12 @@ function Navbar() {
 
   const renderProfileIcon = () => (
     <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200 overflow-hidden">
-      {user.profileImageUrl ? (
-        <img
-          src={user.profileImageUrl}
-          alt="Profile"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <FaUser size={16} />
-      )}
+      <img
+        src={user.profileImageUrl || DEFAULT_PROFILE_IMAGE}
+        alt="Profile"
+        className="w-full h-full object-cover"
+        onError={(e) => { e.target.src = DEFAULT_PROFILE_IMAGE; }}
+      />
     </div>
   );
 
@@ -219,7 +218,9 @@ function Navbar() {
               >
                 Login
               </button>
-              <button
+
+              
+              <button 
                 className="px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
                 onClick={() => {
                   navigate("/register");
