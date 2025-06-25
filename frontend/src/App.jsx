@@ -13,7 +13,7 @@ import Navbar from "./components/Navbar";
 import MapFolktaleExplorer from "./components/MapFilter";
 import BookmarkedFolktale from "./pages/BookmarkedFolktale";
 import Profile from './components/Profile';
-import './styles.css';
+import './App.css';
 
 function App() {
   return (
