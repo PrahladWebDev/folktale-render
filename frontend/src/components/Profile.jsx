@@ -20,11 +20,12 @@ function Profile() {
   const [user, setUser] = useState({ username: "", email: "", isAdmin: false, profileImageUrl: "" });
   const [formData, setFormData] = useState({ username: "", password: "", profileImage: null });
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const token = localStorage.getItem("token");
+  const DEFAULT_PROFILE_IMAGE = "https://via.placeholder.com/150/000000/FFFFFF/?text=User";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -36,11 +37,16 @@ function Profile() {
         const response = await axios.get("/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUser(response.data);
-        setFormData({ username: response.data.username, password: "", profileImage: null });
+        setUser({
+          username: response.data.user.username,
+          email: response.data.user.email,
+          isAdmin: response.data.user.isAdmin,
+          profileImageUrl: response.data.user.profileImageUrl || DEFAULT_PROFILE_IMAGE,
+        });
+        setFormData({ username: response.data.user.username, password: "", profileImage: null });
       } catch (error) {
         console.error("Error fetching profile:", error);
-        setError("Failed to load profile");
+        setErrors([{ field: 'general', message: error.response?.data?.message || 'Failed to load profile' }]);
       }
     };
     fetchProfile();
@@ -48,16 +54,18 @@ function Profile() {
 
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
+    setErrors(errors.filter(err => err.field !== name)); // Clear errors for the field being edited
+
     if (name === "profileImage") {
       const file = files[0];
       if (file) {
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
         if (!allowedTypes.includes(file.type)) {
-          setError("Please upload a valid image (JPEG, JPG, or PNG)");
+          setErrors([...errors, { field: 'profileImage', message: 'Please upload a valid image (JPEG, JPG, or PNG)' }]);
           return;
         }
         if (file.size > 5 * 1024 * 1024) {
-          setError("Image size must not exceed 5MB");
+          setErrors([...errors, { field: 'profileImage', message: 'Image size must not exceed 5MB' }]);
           return;
         }
       }
@@ -70,13 +78,35 @@ function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    setError("");
+    setErrors([]);
     setIsUploading(true);
     setUploadProgress(0);
 
+    // Client-side validation
+    const newErrors = [];
+    if (!formData.username.trim()) {
+      newErrors.push({ field: 'username', message: 'Username is required' });
+    } else if (formData.username.trim().length < 3) {
+      newErrors.push({ field: 'username', message: 'Username must be at least 3 characters' });
+    }
+
+    if (formData.password && formData.password.length < 8) {
+      newErrors.push({ field: 'password', message: 'Password must be at least 8 characters' });
+    } else if (formData.password && !/[A-Z]/.test(formData.password)) {
+      newErrors.push({ field: 'password', message: 'Password must contain at least one uppercase letter' });
+    } else if (formData.password && !/[0-9]/.test(formData.password)) {
+      newErrors.push({ field: 'password', message: 'Password must contain at least one number' });
+    }
+
+    if (newErrors.length > 0) {
+      setErrors(newErrors);
+      setIsUploading(false);
+      return;
+    }
+
     try {
       const data = new FormData();
-      data.append("username", formData.username);
+      data.append("username", formData.username.trim());
       if (formData.password) {
         data.append("password", formData.password);
       }
@@ -95,17 +125,43 @@ function Profile() {
         },
       });
 
-      setUser({ ...user, username: response.data.username, profileImageUrl: response.data.profileImageUrl });
+      setUser({
+        ...user,
+        username: response.data.user.username,
+        profileImageUrl: response.data.user.profileImageUrl || DEFAULT_PROFILE_IMAGE,
+      });
       setMessage(response.data.message);
-      setFormData({ username: response.data.username, password: "", profileImage: null });
+      setFormData({ username: response.data.user.username, password: "", profileImage: null });
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      setError(error.response?.data?.message || "Failed to update profile");
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+      } else {
+        setErrors([{ 
+          field: 'general', 
+          message: error.response?.data?.message || 'Failed to update profile' 
+        }]);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const renderError = (field) => {
+    const error = errors.find(err => err.field === field || err.field === 'general');
+    return error ? (
+      <motion.div
+        variants={itemVariants}
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-3 border-l-4 border-red-500"
+      >
+        <FaExclamationCircle className="text-red-500 flex-shrink-0" />
+        <span>{error.message}</span>
+      </motion.div>
+    ) : null;
   };
 
   const containerVariants = {
@@ -136,27 +192,24 @@ function Profile() {
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full"
+        transition={{ duration: 200 }}
+        className="bg-white rounded-xl shadow-md border-2 border-amber-200 p-8 max-w-md w-full"
       >
         <div className="flex justify-center mb-6">
           <motion.div whileHover={{ scale: 1.1 }} className="relative">
-            <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 overflow-hidden">
-              {user.profileImageUrl ? (
-                <img
-                  src={user.profileImageUrl}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <FaUser className="text-amber-700 text-4xl" />
-              )}
+            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-4 border-amber-200 overflow-hidden">
+              <img
+                src={user.profileImageUrl || DEFAULT_PROFILE_IMAGE}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.src = DEFAULT_PROFILE_IMAGE; }}
+              />
             </div>
             {user.isAdmin && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-amber-600 text-white rounded-full p-1"
+                className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-2"
                 title="Admin"
               >
                 <FaCrown className="text-xs" />
@@ -165,13 +218,13 @@ function Profile() {
           </motion.div>
         </div>
 
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
           <motion.h2
             variants={itemVariants}
-            className="text-3xl font-bold text-amber-900 text-center flex items-center justify-center gap-3"
-          >
+            className="text-3xl font-semibold text-amber-900 text-center flex items-center justify-center gap-3"
+            >
             <FaUserEdit className="text-amber-700" />
-            {user.username || "My Profile"}
+            {user.username || "Profile"}
           </motion.h2>
 
           {message && (
@@ -179,31 +232,24 @@ function Profile() {
               variants={itemVariants}
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
-              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-3 border-l-4 border-green-500"
+              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-3 border-b-2 border-green-600"
             >
-              <FaCheckCircle className="text-green-500 flex-shrink-0" />
+              <FaCheckCircle className="text-green-600 flex-shrink-0" />
               <span>{message}</span>
             </motion.div>
           )}
 
-          {error && (
-            <motion.div
-              variants={itemVariants}
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-3 border-l-4 border-red-500"
-            >
-              <FaExclamationCircle className="text-red-500 flex-shrink-0" />
-              <span>{error}</span>
-            </motion.div>
-          )}
+          {renderError('general')}
+          {renderError('username')}
+          {renderError('password')}
+          {renderError('profileImage')}
 
-          <motion.div variants={itemVariants} className="bg-amber-50 rounded-xl p-4 space-y-3">
+          <motion.div variants={itemVariants} className="bg-gray-100 rounded-lg border-2 p-4 space-y-3">
             <div className="flex items-center gap-3 text-gray-700">
               <FaEnvelope className="text-amber-700 flex-shrink-0" />
               <div>
-                <p className="text-xs text-amber-600">Email</p>
-                <p className="font-medium">{user.email}</p>
+                <p className="text-xs text-gray-500">Email</p>
+                <p className="font-semibold">{user.email}</p>
               </div>
             </div>
 
@@ -214,8 +260,8 @@ function Profile() {
                 <FaUser className="text-amber-700 flex-shrink-0" />
               )}
               <div>
-                <p className="text-xs text-amber-600">Role</p>
-                <p className="font-medium">{user.isAdmin ? "Administrator" : "Standard User"}</p>
+                <p className="text-xs text-gray-500">Role</p>
+                <p className="font-semibold">{user.isAdmin ? "Administrator" : "User"}</p>
               </div>
             </div>
           </motion.div>
@@ -228,7 +274,7 @@ function Profile() {
               encType="multipart/form-data"
             >
               <motion.div variants={itemVariants}>
-                <label htmlFor="username" className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
                   Username
                 </label>
                 <div className="relative">
@@ -238,51 +284,67 @@ function Profile() {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
+                    className={`w-full p-3 rounded-md border-2 ${
+                      errors.find(err => 
+                        err.field === 'username') 
+                        ? 'border-red-200' 
+                        : 'border-amber-200'
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-blue-200 transition-all duration-300 placeholder-gray-400 pl-                    focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10`}
                     placeholder="Enter new username"
                     disabled={isUploading}
                   />
-                  <FaUser className="absolute left-3 top-3.5 text-amber-600" />
+                  <FaUser className="absolute left-3 top-3.5 text-amber-400" />
                 </div>
+                <p className="text-xs text-gray-600 mt-1">At least 3 chars</p>
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="password" className="block mb-2 font-semibold text-sm text-gray-800">
                   New Password
                 </label>
                 <div className="relative">
                   <input
                     type="password"
                     id="password"
-                    name="password"
+                    name="password}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
+                    className={`w-full p-3 rounded-md border-2 ${
+                      errors.find(err => 
+                        err.field === 'password') 
+                        ? 'border-red-200' 
+                        : 'border-amber-200'
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-blue-200 focus:ring-2 focus:ring-blue-amber-500 transition-all duration-300 placeholder-gray-400 pl-10"}
                     placeholder="Enter new password"
                     disabled={isUploading}
                   />
-                  <FaKey className="absolute left-3 top-3.5 text-amber-600" />
+                  <FaKey className="password" className="absolute left-3 top-3.5 text-amber-400" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+                <p className="mt-1 text-xs text-gray-500">At least 8 chars with one uppercase letter and one number; leave blank to keep current password</p>
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <label htmlFor="profileImage" className="block text-gray-700 font-medium mb-2">
-                  Profile Image (Optional)
+                <label htmlFor="profileImage" className="block mb-2 font-semibold text-sm text-gray-700">
+                  <p>Profile Image</p>
                 </label>
                 <div className="relative">
                   <input
                     type="file"
-                    id="profileImage"
+                    id="image-upload"
                     name="profileImage"
                     accept="image/jpeg,image/jpg,image/png"
                     onChange={handleInputChange}
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className={`w-full p-3 rounded-md text-sm border-2 ${
+                      errors.find(err => 
+                        err.field === 'profileImage') 
+                        ? 'border-red-200' 
+                        : 'border-amber-200'
+                    } bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-blue-200 transition-all duration-300`}
                     disabled={isUploading}
                   />
-                  <FaImage className="absolute left-3 top-3.5 text-amber-600" />
+                  <FaImage className="absolute left-3 top-3.5 text-amber-400" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">JPEG, JPG, or PNG (max 5MB)</p>
+                <p className="mt-1 text-xs text-gray-500">JPEG, JPG, or PNG (max 5MB)</p>
               </motion.div>
 
               {isUploading && (
@@ -308,22 +370,25 @@ function Profile() {
 
               <motion.div variants={itemVariants} className="flex gap-3 pt-2">
                 <motion.button
-                  whileHover={{ scale: isUploading ? 1 : 1.02 }}
-                  whileTap={{ scale: isUploading ? 1 : 0.98 }}
+                  whileHover={{ scale: isUploading ? 1 : 1.05 }}
+                  whileTap={{ scale: isUploading ? 1 : 0.95 }}
                   type="submit"
                   disabled={isUploading}
-                  className="flex-1 px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 shadow-md transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {isUploading ? "Uploading..." : "Save Changes"}
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ scale: isUploading ? 1 : 1.02 }}
-                  whileTap={{ scale: isUploading ? 1 : 0.98 }}
+                  whileHover={{ scale: isUploading ? 1 : 1.05 }}
+                  whileTap={{ scale: isUploading ? 1 : 0.95 }}
                   type="button"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                    setIsEditing(false);
+                    setErrors([]);
+                  }}
                   disabled={isUploading}
-                  className="flex-1 px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 shadow-md transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 shadow-md transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </motion.button>
@@ -332,10 +397,10 @@ function Profile() {
           ) : (
             <motion.div variants={itemVariants} className="pt-2">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setIsEditing(true)}
-                className="w-full px-4 py-3 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800 shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 shadow-md transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FaUserEdit /> Edit Profile
               </motion.button>
