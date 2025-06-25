@@ -1,1 +1,112 @@
 
+/* styles.css */
+:root {
+  /* Light mode variables */
+  --background-color: #ffffff;
+  --text-color: #000000;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --navbar-bg-from: #fefce8; /* amber-50 */
+  --navbar-bg-to: #ffedd5; /* orange-100 */
+  --navbar-text: #78350f; /* amber-900 */
+  --button-bg: #78350f; /* amber-900 */
+  --button-text: #ffffff;
+  --button-hover-bg: #7c2d12; /* amber-800 */
+  --button-secondary-bg: #fef9c3; /* amber-200 */
+  --button-secondary-hover-bg: #fef08a; /* amber-300 */
+}
+
+body.dark-mode {
+  /* Dark mode variables */
+  --background-color: #1a1a1a;
+  --text-color: #ffffff;
+  --primary-color: #66b0ff;
+  --secondary-color: #adb5bd;
+  --navbar-bg-from: #2d3748; /* dark gray */
+  --navbar-bg-to: #4a5568; /* darker gray */
+  --navbar-text: #fed7aa; /* orange-200 */
+  --button-bg: #fed7aa; /* orange-200 */
+  --button-text: #1a1a1a;
+  --button-hover-bg: #f4b78e; /* orange-300 */
+  --button-secondary-bg: #4a5568; /* gray-700 */
+  --button-secondary-hover-bg: #718096; /* gray-600 */
+}
+
+/* Apply variables globally */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+/* Style all components to inherit theme */
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, p, div, button, input {
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Navbar specific styles */
+nav {
+  background: linear-gradient(to right, var(--navbar-bg-from), var(--navbar-bg-to));
+  color: var(--text-color);
+}
+
+nav h1, nav button, nav .text-amber-900 {
+  color: var(--navbar-text);
+}
+
+nav button.bg-amber-900 {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+}
+
+nav button.bg-amber-900:hover {
+  background-color: var(--button-hover-bg);
+}
+
+nav button.bg-amber-200 {
+  background-color: var(--button-secondary-bg);
+  color: var(--navbar-text);
+}
+
+nav button.bg-amber-200:hover {
+  background-color: var(--button-secondary-hover-bg);
+}
+
+nav .bg-amber-200 {
+  background-color: var(--button-secondary-bg);
+}
+
+nav .hover\:bg-amber-300:hover {
+  background-color: var(--button-secondary-hover-bg);
+}
+
+/* General button styles */
+button {
+  background-color: var(--primary-color);
+  color: var(--background-color);
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Input styles (for SearchBar) */
+input {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--secondary-color);
+  padding: 8px;
+  border-radius: 4px;
+}
