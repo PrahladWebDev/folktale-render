@@ -10,7 +10,7 @@ import { FaStar } from 'react-icons/fa';
 import { Helmet } from 'react-helmet-async';
 import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, EmailShareButton, FacebookIcon, TwitterIcon, WhatsappIcon, EmailIcon } from 'react-share';
 import jsPDF from 'jspdf';
-import * as htmlToImage from 'html-to-image';
+import html2canvas from 'html2canvas';
 
 // SimilarFolktales Component
 function SimilarFolktales({ genre, currentFolktaleId }) {
@@ -76,26 +76,26 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
             <div
               key={folktale._id}
               className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300"
-              onClick={() => navigate(`/folktale/${folktale._id}`)} // Fixed navigation
+              onClick={() => navigate(`/folktale/${folktale._id}`)}
             >
               <img
                 src={folktale.imageUrl}
                 alt={folktale.title}
-                className="w-full h-40 object-cover rounded-t-lg" // Fixed className, removed invalid class
+                className="w-full h-40 object-cover rounded-t-lg"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/256x160?text=No+Image'; // Fixed URL
+                  e.target.src = 'https://via.placeholder.com/256x160?text=No+Image';
                 }}
               />
-              <div className="p-4"> {/* Fixed className */}
-                <h3 className="text-lg font-bold text-amber-900 truncate">{folktale.title}</h3> {/* Fixed className */}
-                <p className="text-sm text-gray-600">Region: {folktale.region}</p> {/* Unified className */}
-                <p className="text-sm text-gray-600">Age Group: {folktale.ageGroup}</p> {/* Unified className */}
+              <div className="p-4">
+                <h3 className="text-lg font-bold text-amber-900 truncate">{folktale.title}</h3>
+                <p className="text-sm text-gray-600">Region: {folktale.region}</p>
+                <p className="text-sm text-gray-600">Age Group: {folktale.ageGroup}</p>
                 <div className="flex items-center mt-2">
                   <FaStar className="text-amber-600 mr-1" />
                   <span className="text-sm text-gray-600">
                     {folktale.ratings?.length
-                      ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1)
+                      ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length.toFixed(1)
                       : 'No ratings'}
                   </span>
                 </div>
@@ -115,7 +115,6 @@ function SimilarFolktales({ genre, currentFolktaleId }) {
   );
 }
 
-// FolktaleDetail Component (unchanged from previous solution, included for completeness)
 function FolktaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -130,6 +129,7 @@ function FolktaleDetail() {
   const [showShareModal, setShowShareModal] = useState(false);
   const token = localStorage.getItem('token');
   const commentSectionRef = useRef(null);
+  const contentRef = useRef(null);
   const imageRef = useRef(null);
 
   const shareUrl = `${window.location.origin}/folktale/${id}`;
@@ -197,80 +197,146 @@ function FolktaleDetail() {
     }
 
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - 2 * margin;
-      let yOffset = margin;
-
-      const amber900 = [120, 79, 23];
-      const gray600 = [75, 85, 99];
-      const amber200 = [253, 230, 138];
-
-      doc.setFont('Helvetica', 'normal');
-
+      toast.info('Generating PDF... This may take a moment.', { autoClose: false });
+      
+      // Create a temporary div to hold all content we want to capture
+      const pdfContent = document.createElement('div');
+      pdfContent.style.width = '800px';
+      pdfContent.style.padding = '20px';
+      pdfContent.style.backgroundColor = 'white';
+      pdfContent.style.color = 'black';
+      pdfContent.style.fontFamily = 'sans-serif';
+      
+      // Add title
+      const titleEl = document.createElement('h1');
+      titleEl.textContent = folktale.title;
+      titleEl.style.fontSize = '24px';
+      titleEl.style.fontWeight = 'bold';
+      titleEl.style.color = '#78350F'; // amber-900
+      titleEl.style.marginBottom = '20px';
+      titleEl.style.textAlign = 'center';
+      pdfContent.appendChild(titleEl);
+      
+      // Add image if available
       if (imageRef.current && folktale.imageUrl) {
         try {
-          const imgData = await htmlToImage.toPng(imageRef.current);
-          const imgProps = doc.getImageProperties(imgData);
-          const imgWidth = maxWidth;
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          doc.addImage(imgData, 'PNG', margin, yOffset, imgWidth, imgHeight);
-          yOffset += imgHeight + 15;
+          const imgEl = document.createElement('img');
+          imgEl.src = folktale.imageUrl;
+          imgEl.style.maxWidth = '100%';
+          imgEl.style.height = 'auto';
+          imgEl.style.marginBottom = '20px';
+          imgEl.style.borderRadius = '8px';
+          pdfContent.appendChild(imgEl);
         } catch (imgError) {
           console.error('Error adding image to PDF:', imgError);
         }
       }
-
-      doc.setFontSize(24);
-      doc.setTextColor(...amber900);
-      const titleLines = doc.splitTextToSize(folktale.title, maxWidth);
-      doc.text(titleLines, margin, yOffset);
-      yOffset += titleLines.length * 10 + 15;
-
-      doc.setFontSize(12);
-      doc.setTextColor(...gray600);
-      doc.text(`Region: ${folktale.region}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Genre: ${folktale.genre}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Age Group: ${folktale.ageGroup}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Rating: ${folktale.ratings?.length ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1) : 'No ratings'}`, margin, yOffset);
-      yOffset += 20;
-
-      doc.setFontSize(14);
-      const plainText = folktale.content.replace(/<[^>]+>/g, '');
-      const contentLines = doc.splitTextToSize(plainText, maxWidth);
-      let pageCount = 1;
-
-      contentLines.forEach((line) => {
-        if (yOffset + 10 > pageHeight - margin) {
-          doc.addPage();
-          pageCount++;
-          yOffset = margin;
-          doc.setFontSize(12);
-          doc.setTextColor(...gray600);
-          doc.text(`Page ${pageCount}`, pageWidth - margin - 20, yOffset);
-          yOffset += 15;
-          doc.setFontSize(14);
-          doc.setTextColor(...gray600);
-        }
-        doc.text(line, margin, yOffset);
-        yOffset += 10;
+      
+      // Add metadata
+      const metaEl = document.createElement('div');
+      metaEl.style.display = 'flex';
+      metaEl.style.flexWrap = 'wrap';
+      metaEl.style.gap = '10px';
+      metaEl.style.marginBottom = '20px';
+      metaEl.style.justifyContent = 'center';
+      
+      const regionEl = document.createElement('span');
+      regionEl.textContent = `Region: ${folktale.region}`;
+      regionEl.style.fontSize = '14px';
+      regionEl.style.color = '#4B5563'; // gray-600
+      
+      const genreEl = document.createElement('span');
+      genreEl.textContent = `Genre: ${folktale.genre}`;
+      genreEl.style.fontSize = '14px';
+      genreEl.style.color = '#4B5563';
+      
+      const ageEl = document.createElement('span');
+      ageEl.textContent = `Age Group: ${folktale.ageGroup}`;
+      ageEl.style.fontSize = '14px';
+      ageEl.style.color = '#4B5563';
+      
+      const ratingEl = document.createElement('span');
+      ratingEl.textContent = `Rating: ${folktale.ratings?.length ? 
+        (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1) : 
+        'No ratings'}`;
+      ratingEl.style.fontSize = '14px';
+      ratingEl.style.color = '#4B5563';
+      
+      metaEl.appendChild(regionEl);
+      metaEl.appendChild(genreEl);
+      metaEl.appendChild(ageEl);
+      metaEl.appendChild(ratingEl);
+      pdfContent.appendChild(metaEl);
+      
+      // Add content
+      const contentEl = document.createElement('div');
+      contentEl.innerHTML = folktale.content;
+      contentEl.style.fontSize = '16px';
+      contentEl.style.lineHeight = '1.6';
+      contentEl.style.marginBottom = '20px';
+      
+      // Clean up content styles for PDF
+      const elements = contentEl.querySelectorAll('*');
+      elements.forEach(el => {
+        el.style.margin = '0';
+        el.style.padding = '0';
+        el.style.boxSizing = 'border-box';
+        el.style.fontFamily = 'sans-serif';
+        el.style.color = '#1F2937'; // gray-800
       });
-
-      doc.setDrawColor(...amber200);
-      doc.line(margin, pageHeight - margin, pageWidth - margin, pageHeight - margin);
-      doc.setFontSize(10);
-      doc.setTextColor(...gray600);
-      doc.text(`Generated from ${window.location.origin}`, margin, pageHeight - margin + 10);
-
-      doc.save(`${folktale.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+      
+      pdfContent.appendChild(contentEl);
+      
+      // Add footer
+      const footerEl = document.createElement('div');
+      footerEl.textContent = `Downloaded from ${window.location.origin}`;
+      footerEl.style.fontSize = '12px';
+      footerEl.style.color = '#4B5563';
+      footerEl.style.textAlign = 'center';
+      footerEl.style.marginTop = '20px';
+      footerEl.style.paddingTop = '10px';
+      footerEl.style.borderTop = '1px solid #FDE68A'; // amber-200
+      pdfContent.appendChild(footerEl);
+      
+      // Append to body (temporarily)
+      document.body.appendChild(pdfContent);
+      
+      // Generate PDF
+      const canvas = await html2canvas(pdfContent, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      // Remove temporary element
+      document.body.removeChild(pdfContent);
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`${folktale.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+      toast.dismiss();
       toast.success('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
+      toast.dismiss();
       toast.error('Failed to generate PDF. Please try again.');
     }
   };
@@ -521,7 +587,7 @@ function FolktaleDetail() {
               }
             })()}
           </h2>
-          <div className="text-lg leading-relaxed">
+          <div className="text-lg leading-relaxed" ref={contentRef}>
             {token ? (
               <div className="mb-5 prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: folktale.content }} />
             ) : (
