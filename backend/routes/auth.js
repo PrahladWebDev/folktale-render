@@ -57,11 +57,11 @@ const upload = multer({
     const filetypes = /jpeg|jpg|png/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = /image\/(jpeg|jpg|png)/.test(file.mimetype);
-    console.log('File validation:', { 
-      name: file.originalname, 
-      mimetype: file.mimetype, 
+    console.log('File validation:', {
+      name: file.originalname,
+      mimetype: file.mimetype,
       extname: path.extname(file.originalname).toLowerCase(),
-      valid: extname && mimetype 
+      valid: extname && mimetype,
     });
     if (extname && mimetype) {
       return cb(null, true);
@@ -72,12 +72,18 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit for image upload
   },
-}).single('profileImage'); // Changed from 'image-upload' to 'profileImage'
+}).single('profileImage');
 
 // Input validation middleware
 const validateRegister = [
   body('username').trim().notEmpty().withMessage('Username is required'),
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
+  body('email')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail({
+      gmail_remove_dots: false, // Preserve dots in Gmail addresses
+      all_lowercase: true, // Convert to lowercase
+      gmail_remove_subaddress: false, // Preserve subaddresses
+    }).withMessage('Invalid email format'),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
@@ -85,16 +91,34 @@ const validateRegister = [
 ];
 
 const validateLogin = [
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
+  body('email')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail({
+      gmail_remove_dots: false, // Preserve dots in Gmail addresses
+      all_lowercase: true, // Convert to lowercase
+      gmail_remove_subaddress: false, // Preserve subaddresses
+    }).withMessage('Invalid email format'),
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
 const validateForgotPassword = [
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
+  body('email')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail({
+      gmail_remove_dots: false, // Preserve dots in Gmail addresses
+      all_lowercase: true, // Convert to lowercase
+      gmail_remove_subaddress: false, // Preserve subaddresses
+    }).withMessage('Invalid email format'),
 ];
 
 const validateResetPassword = [
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
+  body('email')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail({
+      gmail_remove_dots: false, // Preserve dots in Gmail addresses
+      all_lowercase: true, // Convert to lowercase
+      gmail_remove_subaddress: false, // Preserve subaddresses
+    }).withMessage('Invalid email format'),
   body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
   body('newPassword')
     .isLength({ min: 8 }).withMessage('New password must be at least 8 characters')
@@ -122,8 +146,8 @@ const validate = (req, res, next) => {
       message: 'Validation error',
       errors: errors.array().map(err => ({
         field: err.param,
-        message: err.msg
-      }))
+        message: err.msg,
+      })),
     });
   }
   next();
@@ -140,9 +164,9 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
 
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'User already exists',
-        errors: [{ field: 'email', message: 'Email is already registered' }]
+        errors: [{ field: 'email', message: 'Email is already registered' }],
       });
     }
 
@@ -220,17 +244,23 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
       await fs.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
     }
     console.error('❌ Register Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Registration failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
 
 // Verify OTP
 router.post('/verify-otp', [
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email format'),
-  body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+  body('email')
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail({
+      gmail_remove_dots: false, // Preserve dots in Gmail addresses
+      all_lowercase: true, // Convert to lowercase
+      gmail_remove_subaddress: false, // Preserve subaddresses
+    }).ariadoWithMessage('Invalid email format'),
+  body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ], validate, async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -238,21 +268,21 @@ router.post('/verify-otp', [
     if (!user) {
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'email', message: 'No user found with this email' }]
+        errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
 
     if (user.otp !== otp) {
       return res.status(400).json({
         message: 'Invalid OTP',
-        errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }]
+        errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }],
       });
     }
 
     if (user.otpExpires < Date.now()) {
       return res.status(400).json({
         message: 'Expired OTP',
-        errors: [{ field: 'otp', message: 'The OTP has expired' }]
+        errors: [{ field: 'otp', message: 'The OTP has expired' }],
       });
     }
 
@@ -265,9 +295,9 @@ router.post('/verify-otp', [
     res.json({ token, message: 'Email verified successfully' });
   } catch (error) {
     console.error('❌ OTP Verification Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'OTP verification failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
@@ -280,13 +310,13 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
     if (!user) {
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'email', message: 'No user found with this email' }]
+        errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
     if (!user.isVerified) {
       return res.status(400).json({
         message: 'Email not verified',
-        errors: [{ field: 'email', message: 'This email is not verified' }]
+        errors: [{ field: 'email', message: 'This email is not verified' }],
       });
     }
 
@@ -333,9 +363,9 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
     res.status(200).json({ message: 'OTP sent to email' });
   } catch (error) {
     console.error('❌ Forgot Password Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Password reset request failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
@@ -348,21 +378,21 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
     if (!user) {
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'email', message: 'No user found with this email' }]
+        errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
 
     if (user.otp !== otp) {
       return res.status(400).json({
         message: 'Invalid OTP',
-        errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }]
+        errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }],
       });
     }
 
     if (user.otpExpires < Date.now()) {
       return res.status(400).json({
         message: 'Expired OTP',
-        errors: [{ field: 'otp', message: 'The OTP has expired' }]
+        errors: [{ field: 'otp', message: 'The OTP has expired' }],
       });
     }
 
@@ -375,9 +405,9 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('❌ Reset Password Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Password reset failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
@@ -393,7 +423,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
       }
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'user', message: 'Authenticated user not found' }]
+        errors: [{ field: 'user', message: 'Authenticated user not found' }],
       });
     }
 
@@ -405,7 +435,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
         }
         return res.status(400).json({
           message: 'Username already taken',
-          errors: [{ field: 'username', message: 'This username is already in use' }]
+          errors: [{ field: 'username', message: 'This username is already in use' }],
         });
       }
       user.username = username;
@@ -428,7 +458,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
         }
         return res.status(500).json({
           message: 'Failed to upload profile image',
-          errors: [{ field: 'profileImage', message: `Image upload failed: ${cloudinaryError.message}` }]
+          errors: [{ field: 'profileImage', message: `Image upload failed: ${cloudinaryError.message}` }],
         });
       } finally {
         if (req.file?.path) {
@@ -438,23 +468,23 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
     }
 
     await user.save();
-    res.json({ 
-      message: 'Profile updated successfully', 
+    res.json({
+      message: 'Profile updated successfully',
       user: {
         username: user.username,
         email: user.email,
         profileImageUrl: user.profileImageUrl,
-        isAdmin: user.isAdmin
-      }
+        isAdmin: user.isAdmin,
+      },
     });
   } catch (error) {
     if (req.file?.path) {
       await fs.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
     }
     console.error('❌ Update Profile Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Profile update failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
@@ -467,14 +497,14 @@ router.post('/login', validateLogin, validate, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'email', message: 'No user found with this email' }]
+        errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
 
     if (!user.isVerified) {
       return res.status(403).json({
         message: 'Email not verified',
-        errors: [{ field: 'email', message: 'Please verify your email before logging in' }]
+        errors: [{ field: 'email', message: 'Please verify your email before logging in' }],
       });
     }
 
@@ -482,25 +512,25 @@ router.post('/login', validateLogin, validate, async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         message: 'Invalid credentials',
-        errors: [{ field: 'password', message: 'Incorrect password' }]
+        errors: [{ field: 'password', message: 'Incorrect password' }],
       });
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ 
+    res.json({
       token,
       user: {
         username: user.username,
         email: user.email,
         isAdmin: user.isAdmin,
-        profileImageUrl: user.profileImageUrl
-      }
+        profileImageUrl: user.profileImageUrl,
+      },
     });
   } catch (error) {
     console.error('❌ Login Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Login failed',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
@@ -512,18 +542,18 @@ router.get('/me', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         message: 'User not found',
-        errors: [{ field: 'user', message: 'Authenticated user not found' }]
+        errors: [{ field: 'user', message: 'Authenticated user not found' }],
       });
     }
     res.json({
       message: 'Profile retrieved successfully',
-      user
+      user,
     });
   } catch (error) {
     console.error('❌ Profile Fetch Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to fetch profile',
-      errors: [{ field: 'server', message: error.message }]
+      errors: [{ field: 'server', message: error.message }],
     });
   }
 });
