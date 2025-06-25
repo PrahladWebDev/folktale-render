@@ -1,13 +1,11 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
-import { FaBookmark, FaBars, FaTimes, FaUser, FaMoon, FaSun } from "react-icons/fa";
-import { ThemeContext } from "../ThemeContext";
+import { FaBookmark, FaBars, FaTimes, FaUser } from "react-icons/fa";
 
 function Navbar() {
   const navigate = useNavigate();
-  const { isDarkMode, toggleDarkMode } = useContext(ThemeContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState({ username: null, profileImageUrl: "" });
@@ -96,13 +94,6 @@ function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           <button
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-200 text-amber-900 hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
-            onClick={toggleDarkMode}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {isDarkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
-          </button>
-          <button
             className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
             onClick={() => navigate("/map")}
           >
@@ -175,17 +166,6 @@ function Navbar() {
               </div>
             )}
           </div>
-
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
-            onClick={() => {
-              toggleDarkMode();
-              setIsMenuOpen(false);
-            }}
-          >
-            {isDarkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
-            {isDarkMode ? "Light Mode" : "Dark Mode"}
-          </button>
 
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
