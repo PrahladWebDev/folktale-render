@@ -1,4 +1,3 @@
-in below the when i download pdf and open the text contents doesnot show correctly please do that all contents and image show correctly like showing in web page and provide compleet code
 // FolktaleDetail.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
