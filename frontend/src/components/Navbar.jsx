@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
 import { FaBookmark, FaBars, FaTimes, FaUser, FaMoon, FaSun } from "react-icons/fa";
-import { ThemeContext } from "./ThemeContext";
+import { ThemeContext } from "../ThemeContext";
 
 function Navbar() {
   const navigate = useNavigate();
