@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
-import { FaBookmark, FaBars, FaTimes, FaUser } from "react-icons/fa";
+import { FaBookmark, FaBars, FaTimes } from "react-icons/fa";
 
 function Navbar() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState({ username: null, profileImageUrl: "" });
+
   const token = localStorage.getItem("token");
-  // Default profile image URL
   const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dvws2chvw/image/upload/v1750855878/user_profiles/b2kfd6sawgnkrimdnm3m.png";
 
   useEffect(() => {
@@ -40,12 +40,10 @@ function Navbar() {
     setIsMenuOpen(false);
   };
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const renderProfileIcon = () => (
-    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center hover:bg-amber-300 transition-colors duration-200 overflow-hidden">
+    <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-200 hover:bg-amber-300 transition-colors duration-200">
       <img
         src={user.profileImageUrl || DEFAULT_PROFILE_IMAGE}
         alt="Profile"
@@ -58,6 +56,7 @@ function Navbar() {
   return (
     <nav className="bg-gradient-to-r from-amber-50 to-orange-100 shadow-md p-3 sticky top-0 z-[1000] font-caveat text-gray-800 animate-fadeIn">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        {/* Logo */}
         <h1
           className="text-2xl sm:text-3xl font-bold text-amber-900 cursor-pointer hover:text-amber-700 transition-colors duration-200"
           onClick={() => {
@@ -68,6 +67,7 @@ function Navbar() {
           Legend संसार
         </h1>
 
+        {/* Mobile menu toggle */}
         <button
           className="md:hidden text-amber-900 focus:outline-none"
           onClick={toggleMenu}
@@ -76,32 +76,30 @@ function Navbar() {
           {isMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
 
-        <div className="hidden md:flex flex-1 items-center gap-4 mx-4">
+        {/* Desktop navbar items */}
+        <div className="hidden md:flex flex-1 items-center justify-end gap-4">
           <SearchBar />
-          {user.username && (
-            <div className="flex items-center gap-2 text-amber-900 font-semibold">
-              <button
-                className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
-                onClick={() => navigate("/profile")}
-                title="Profile"
-              >
-                {renderProfileIcon()}
-              </button>
-            </div>
-          )}
-        </div>
 
-        <div className="hidden md:flex items-center gap-3">
+          {user.username && (
+            <button
+              onClick={() => navigate("/profile")}
+              title="Profile"
+              className="hover:scale-105 transition-transform duration-200"
+            >
+              {renderProfileIcon()}
+            </button>
+          )}
+
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
             onClick={() => navigate("/map")}
+            className="flex items-center gap-1 px-4 py-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 hover:shadow-lg font-semibold transition-all duration-200"
           >
-            <span>🌍</span> Map
+            🌍 Map
           </button>
 
           <button
-            className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
             onClick={() => navigate("/bookmarks")}
+            className="p-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
             title="Bookmarks"
           >
             <FaBookmark />
@@ -111,15 +109,15 @@ function Navbar() {
             <>
               {isAdmin && (
                 <button
-                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                   onClick={() => navigate("/admin")}
+                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 >
                   Admin Panel
                 </button>
               )}
               <button
-                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                 onClick={handleLogout}
+                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
               >
                 Logout
               </button>
@@ -127,14 +125,14 @@ function Navbar() {
           ) : (
             <>
               <button
-                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                 onClick={() => navigate("/login")}
+                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
               >
                 Login
               </button>
               <button
-                className="px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                 onClick={() => navigate("/register")}
+                className="px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
               >
                 Register
               </button>
@@ -143,66 +141,64 @@ function Navbar() {
         </div>
       </div>
 
+      {/* Mobile navbar dropdown */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="flex flex-col gap-3 pt-4">
-          <div className="px-4 flex flex-col gap-3">
-            <SearchBar />
-            {user.username && (
-              <div className="flex items-center gap-2 text-amber-900 font-semibold">
-                <button
-                  className="flex items-center gap-2 hover:text-amber-700 transition-colors duration-200"
-                  onClick={() => {
-                    navigate("/profile");
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  {renderProfileIcon()}
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="flex flex-col gap-3 pt-4 px-4">
+          <SearchBar />
+
+          {user.username && (
+            <button
+              onClick={() => {
+                navigate("/profile");
+                setIsMenuOpen(false);
+              }}
+              className="self-start"
+              title="Profile"
+            >
+              {renderProfileIcon()}
+            </button>
+          )}
 
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
             onClick={() => {
               navigate("/map");
               setIsMenuOpen(false);
             }}
+            className="flex items-center gap-1 px-4 py-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 transition-all duration-200"
           >
-            <span>🌍</span> Map
+            🌍 Map
           </button>
 
           <button
-            className="flex items-center justify-center px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
             onClick={() => {
               navigate("/bookmarks");
               setIsMenuOpen(false);
             }}
-            title="Bookmarks"
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 transition-all duration-200"
           >
-            <FaBookmark />
+            <FaBookmark /> Bookmarks
           </button>
 
           {token ? (
             <>
               {isAdmin && (
                 <button
-                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                   onClick={() => {
                     navigate("/admin");
                     setIsMenuOpen(false);
                   }}
+                  className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 hover:bg-amber-300 transition-all duration-200"
                 >
                   Admin Panel
                 </button>
               )}
               <button
-                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={handleLogout}
+                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 hover:bg-amber-300 transition-all duration-200"
               >
                 Logout
               </button>
@@ -210,22 +206,20 @@ function Navbar() {
           ) : (
             <>
               <button
-                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 font-semibold hover:bg-amber-300 hover:shadow-lg transition-all duration-200"
                 onClick={() => {
                   navigate("/login");
                   setIsMenuOpen(false);
                 }}
+                className="px-4 py-2 rounded-md bg-amber-200 text-amber-900 hover:bg-amber-300 transition-all duration-200"
               >
                 Login
               </button>
-
-              
-              <button 
-                className="px-4 py-2 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
+              <button
                 onClick={() => {
                   navigate("/register");
                   setIsMenuOpen(false);
                 }}
+                className="px-4 py-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 transition-all duration-200"
               >
                 Register
               </button>
