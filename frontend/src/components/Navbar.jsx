@@ -92,9 +92,10 @@ function Navbar() {
 
           <button
             onClick={() => navigate("/map")}
-            className="flex items-center gap-1 px-4 py-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 hover:shadow-lg font-semibold transition-all duration-200"
-          >
-            🌍 Map
+ className="p-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
+            title="Map"
+            >
+            🌍
           </button>
 
           <button
