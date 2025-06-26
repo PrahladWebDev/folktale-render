@@ -107,7 +107,7 @@ function Register() {
         },
       });
 
-      navigate('/verify-otp', { state: { email: normalizedEmail } });
+      navigate('/email-verification-sent', { state: { email: normalizedEmail } });
     } catch (error) {
       console.error('Register error:', error);
       if (error.response?.data?.errors) {
