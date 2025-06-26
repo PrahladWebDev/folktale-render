@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
-import { FaBookmark, FaBars, FaTimes FaGlobeAsia } from "react-icons/fa";
+import { FaBookmark, FaBars, FaTimes, FaGlobeAsia } from "react-icons/fa";
 
 function Navbar() {
   const navigate = useNavigate();
