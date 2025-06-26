@@ -25,7 +25,7 @@ function Profile() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const token = localStorage.getItem("token");
-  const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dvws2chvw/image/upload/v1750855878/user_profiles/b2kfd6sawgnkrimdnm3m.png";
+  const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dvws2chvw/image/upload/v1750929194/user_profiles/jwkack4vcko50qfaawfn.png";
 
   useEffect(() => {
     const fetchProfile = async () => {
