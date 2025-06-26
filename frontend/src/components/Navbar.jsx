@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import SearchBar from "./SearchBar";
-import { FaBookmark, FaBars, FaTimes, FaGlobeAsia } from "react-icons/fa";
+import { FaBookmark, FaBars, FaTimes } from "react-icons/fa";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -95,7 +95,7 @@ function Navbar() {
   className="p-2 rounded-md bg-amber-900 text-white hover:bg-amber-800 hover:shadow-lg transition-all duration-200"
   title="Map"
 >
-  <FaGlobeAsia size={20} />
+  🌍
 </button>
 
           <button
