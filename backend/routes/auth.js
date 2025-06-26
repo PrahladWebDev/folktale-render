@@ -117,7 +117,7 @@ const validateResetPassword = [
       all_lowercase: true,
       gmail_remove_subaddress: false,
     }).withMessage('Invalid email format'),
-  body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
+  body('otp').trim().isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
   body('newPassword')
     .isLength({ min: 8 }).withMessage('New password must be at least 8 characters')
     .matches(/[A-Z]/).withMessage('New password must contain at least one uppercase letter')
@@ -268,7 +268,7 @@ router.get('/verify-email/:token', async (req, res) => {
     }
 
     user.isVerified = true;
-    user.verificationToken = undefined;
+    user.verificationToken = null;
     await user.save();
 
     const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -356,7 +356,7 @@ router.post('/resend-verification', validateForgotPassword, validate, async (req
   }
 });
 
-// Forgot Password (unchanged)
+// Forgot Password
 router.post('/forgot-password', validateForgotPassword, validate, async (req, res) => {
   try {
     const { email } = req.body;
@@ -375,9 +375,11 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
     }
 
     const otp = generateOTP();
-    user.otp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    user.otp = otp.toString(); // Ensure OTP is stored as a string
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
+
+    console.log('Generated OTP:', otp); // Debug log to verify OTP
 
     await new Promise((resolve, reject) => {
       const mailOptions = {
@@ -424,7 +426,7 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
   }
 });
 
-// Reset Password (unchanged)
+// Reset Password
 router.post('/reset-password', validateResetPassword, validate, async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -436,7 +438,10 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
       });
     }
 
-    if (user.otp !== otp) {
+    console.log('Stored OTP:', user.otp, 'Received OTP:', otp); // Debug log
+
+    // Ensure OTP is compared as strings and trimmed
+    if (user.otp !== otp.toString().trim()) {
       return res.status(400).json({
         message: 'Invalid OTP',
         errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }],
@@ -452,12 +457,11 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
-    user.otp = undefined;
-    user.otpExpires = undefined;
+    user.otp = null;
+    user.otpExpires = null;
     await user.save();
 
-    re
-s.json({ message: 'Password reset successfully' });
+    res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('❌ Reset Password Error:', error);
     res.status(500).json({
@@ -467,7 +471,7 @@ s.json({ message: 'Password reset successfully' });
   }
 });
 
-// Update Profile (unchanged)
+// Update Profile
 router.put('/update-profile', auth, upload, validateUpdateProfile, validate, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -544,7 +548,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
   }
 });
 
-// Login (modified to include resend verification link option)
+// Login
 router.post('/login', validateLogin, validate, async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -591,7 +595,7 @@ router.post('/login', validateLogin, validate, async (req, res) => {
   }
 });
 
-// Get Profile (unchanged)
+// Get Profile
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('username email isAdmin profileImageUrl');
@@ -614,7 +618,11 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-// Generate 6-digit OTP (used only for forgot/reset password)
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+// Generate 6-digit OTP
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log('Generated OTP (function):', otp); // Debug log
+  return otp;
+};
 
 export default router;
