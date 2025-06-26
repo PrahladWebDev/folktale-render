@@ -9,11 +9,9 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { body, validationResult } from 'express-validator';
+import crypto from 'crypto';
 
 const router = express.Router();
-
-// Generate 6-digit OTP
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // Setup Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -80,9 +78,9 @@ const validateRegister = [
   body('email')
     .isEmail().withMessage('Invalid email format')
     .normalizeEmail({
-      gmail_remove_dots: false, // Preserve dots in Gmail addresses
-      all_lowercase: true, // Convert to lowercase
-      gmail_remove_subaddress: false, // Preserve subaddresses
+      gmail_remove_dots: false,
+      all_lowercase: true,
+      gmail_remove_subaddress: false,
     }).withMessage('Invalid email format'),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
@@ -94,9 +92,9 @@ const validateLogin = [
   body('email')
     .isEmail().withMessage('Invalid email format')
     .normalizeEmail({
-      gmail_remove_dots: false, // Preserve dots in Gmail addresses
-      all_lowercase: true, // Convert to lowercase
-      gmail_remove_subaddress: false, // Preserve subaddresses
+      gmail_remove_dots: false,
+      all_lowercase: true,
+      gmail_remove_subaddress: false,
     }).withMessage('Invalid email format'),
   body('password').notEmpty().withMessage('Password is required'),
 ];
@@ -105,9 +103,9 @@ const validateForgotPassword = [
   body('email')
     .isEmail().withMessage('Invalid email format')
     .normalizeEmail({
-      gmail_remove_dots: false, // Preserve dots in Gmail addresses
-      all_lowercase: true, // Convert to lowercase
-      gmail_remove_subaddress: false, // Preserve subaddresses
+      gmail_remove_dots: false,
+      all_lowercase: true,
+      gmail_remove_subaddress: false,
     }).withMessage('Invalid email format'),
 ];
 
@@ -115,9 +113,9 @@ const validateResetPassword = [
   body('email')
     .isEmail().withMessage('Invalid email format')
     .normalizeEmail({
-      gmail_remove_dots: false, // Preserve dots in Gmail addresses
-      all_lowercase: true, // Convert to lowercase
-      gmail_remove_subaddress: false, // Preserve subaddresses
+      gmail_remove_dots: false,
+      all_lowercase: true,
+      gmail_remove_subaddress: false,
     }).withMessage('Invalid email format'),
   body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
   body('newPassword')
@@ -171,7 +169,7 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = generateOTP();
+    const verificationToken = crypto.randomBytes(32).toString('hex');
     let profileImageUrl = null;
 
     if (req.file) {
@@ -196,27 +194,32 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
       password: hashedPassword,
       isAdmin: isAdmin || false,
       isVerified: false,
-      otp,
-      otpExpires: Date.now() + 10 * 60 * 1000,
+      verificationToken,
       profileImageUrl,
     });
 
     await user.save();
 
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     const mailOptions = {
       from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Your OTP for Verification',
+      subject: 'Verify Your Email Address',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
           <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
           <p style="font-size: 16px; color: #555;">
-            Thank you for registering. Please use the OTP below to verify your email address. 
-            This OTP is valid for <strong>10 minutes</strong>.
+            Thank you for registering. Please click the button below to verify your email address.
           </p>
           <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
+            <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              Verify Email
+            </a>
           </div>
+          <p style="font-size: 14px; color: #888;">
+            If the button doesn't work, copy and paste this link into your browser: <br>
+            <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
+          </p>
           <p style="font-size: 14px; color: #888;">
             If you didn’t request this, you can ignore this email.
           </p>
@@ -231,7 +234,7 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
     await new Promise((resolve, reject) => {
       transporter.sendMail(mailOptions, (err, info) => {
         if (err) {
-          reject(new Error(`Failed to send OTP email: ${err.message}`));
+          reject(new Error(`Failed to send verification email: ${err.message}`));
         } else {
           console.log('✅ Email sent:', info.response);
           resolve();
@@ -239,7 +242,7 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
       });
     });
 
-    res.status(201).json({ message: 'Registration successful, OTP sent to email' });
+    res.status(201).json({ message: 'Registration successful, verification link sent to email' });
   } catch (error) {
     if (req.file?.path) {
       await fs.unlink(req.file.path).catch(err => console.error('Failed to delete temp file:', err));
@@ -252,19 +255,37 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
   }
 });
 
-// Verify OTP
-router.post('/verify-otp', [
-  body('email')
-    .isEmail().withMessage('Invalid email format')
-    .normalizeEmail({
-      gmail_remove_dots: false, // Preserve dots in Gmail addresses
-      all_lowercase: true, // Convert to lowercase
-      gmail_remove_subaddress: false, // Preserve subaddresses
-    }).withMessage('Invalid email format'),
-  body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
-], validate, async (req, res) => {
+// Verify Email
+router.get('/verify-email/:token', async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { token } = req.params;
+    const user = await User.findOne({ verificationToken: token });
+    if (!user) {
+      return res.status(400).json({
+        message: 'Invalid or expired verification token',
+        errors: [{ field: 'token', message: 'Invalid or expired verification token' }],
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token: jwtToken, message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('❌ Email Verification Error:', error);
+    res.status(500).json({
+      message: 'Email verification failed',
+      errors: [{ field: 'server', message: error.message }],
+    });
+  }
+});
+
+// Resend Verification Email
+router.post('/resend-verification', validateForgotPassword, validate, async (req, res) => {
+  try {
+    const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -272,38 +293,70 @@ router.post('/verify-otp', [
         errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
-
-    if (user.otp !== otp) {
+    if (user.isVerified) {
       return res.status(400).json({
-        message: 'Invalid OTP',
-        errors: [{ field: 'otp', message: 'The OTP entered is incorrect' }],
+        message: 'Email already verified',
+        errors: [{ field: 'email', message: 'This email is already verified' }],
       });
     }
 
-    if (user.otpExpires < Date.now()) {
-      return res.status(400).json({
-        message: 'Expired OTP',
-        errors: [{ field: 'otp', message: 'The OTP has expired' }],
-      });
-    }
-
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, message: 'Email verified successfully' });
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    const mailOptions = {
+      from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Verify Your Email Address',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+          <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
+          <p style="font-size: 16px; color: #555;">
+            Please click the button below to verify your email address.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              Verify Email
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #888;">
+            If the button doesn't work, copy and paste this link into your browser: <br>
+            <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
+          </p>
+          <p style="font-size: 14px; color: #888;">
+            If you didn’t request this, you can ignore this email.
+          </p>
+          <hr style="margin-top: 40px;">
+          <p style="font-size: 12px; color: #aaa; text-align: center;">
+            © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+          </p>
+        </div>
+      `,
+    };
+
+    await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          reject(new Error(`Failed to send verification email: ${err.message}`));
+        } else {
+          console.log('✅ Email sent:', info.response);
+          resolve();
+        }
+      });
+    });
+
+    res.status(200).json({ message: 'Verification link sent to email' });
   } catch (error) {
-    console.error('❌ OTP Verification Error:', error);
+    console.error('❌ Resend Verification Error:', error);
     res.status(500).json({
-      message: 'OTP verification failed',
+      message: 'Failed to resend verification email',
       errors: [{ field: 'server', message: error.message }],
     });
   }
 });
 
-// Forgot Password
+// Forgot Password (unchanged)
 router.post('/forgot-password', validateForgotPassword, validate, async (req, res) => {
   try {
     const { email } = req.body;
@@ -371,7 +424,7 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
   }
 });
 
-// Reset Password
+// Reset Password (unchanged)
 router.post('/reset-password', validateResetPassword, validate, async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -403,7 +456,8 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
     user.otpExpires = undefined;
     await user.save();
 
-    res.json({ message: 'Password reset successfully' });
+    re
+s.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('❌ Reset Password Error:', error);
     res.status(500).json({
@@ -413,7 +467,7 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
   }
 });
 
-// Update Profile
+// Update Profile (unchanged)
 router.put('/update-profile', auth, upload, validateUpdateProfile, validate, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -490,7 +544,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
   }
 });
 
-// Login
+// Login (modified to include resend verification link option)
 router.post('/login', validateLogin, validate, async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -506,6 +560,7 @@ router.post('/login', validateLogin, validate, async (req, res) => {
       return res.status(403).json({
         message: 'Email not verified',
         errors: [{ field: 'email', message: 'Please verify your email before logging in' }],
+        resendVerification: true,
       });
     }
 
@@ -536,7 +591,7 @@ router.post('/login', validateLogin, validate, async (req, res) => {
   }
 });
 
-// Get Profile
+// Get Profile (unchanged)
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('username email isAdmin profileImageUrl');
@@ -558,5 +613,8 @@ router.get('/me', auth, async (req, res) => {
     });
   }
 });
+
+// Generate 6-digit OTP (used only for forgot/reset password)
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export default router;
