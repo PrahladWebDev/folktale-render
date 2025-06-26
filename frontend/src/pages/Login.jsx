@@ -15,7 +15,6 @@ function Login() {
     setIsLoading(true);
     setErrors([]);
 
-    // Normalize inputs: trim spaces and convert email to lowercase
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
@@ -38,6 +37,9 @@ function Login() {
       console.error('Login error:', error);
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
+        if (error.response.data.resendVerification) {
+          setErrors([...error.response.data.errors, { field: 'resend', message: 'Resend verification email' }]);
+        }
       } else {
         setErrors([{ 
           field: 'general', 
@@ -49,8 +51,39 @@ function Login() {
     }
   };
 
+  const handleResendVerification = async () => {
+    setIsLoading(true);
+    setErrors([]);
+    try {
+      await axios.post('/api/auth/resend-verification', { email });
+      navigate('/email-verification-sent', { state: { email } });
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      setErrors([{ 
+        field: 'general', 
+        message: error.response?.data?.message || 'Failed to resend verification email' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderError = (field) => {
     const error = errors.find(err => err.field === field || err.field === 'general');
+    if (error && error.field === 'resend') {
+      return (
+        <div className="bg-amber-100 text-amber-600 p-3 rounded-md border-b-2 border-amber-200 mb-5 text-center text-sm font-semibold animate-shake">
+          {error.message}{' '}
+          <button
+            onClick={handleResendVerification}
+            className="text-amber-600 font-semibold hover:underline"
+            disabled={isLoading}
+          >
+            Click here to resend
+          </button>
+        </div>
+      );
+    }
     return error ? (
       <div className="bg-red-100 text-red-600 p-3 rounded-md border-b-2 border-red-200 mb-5 text-center text-sm font-semibold animate-shake">
         {error.message}
@@ -77,6 +110,7 @@ function Login() {
         {renderError('general')}
         {renderError('email')}
         {renderError('password')}
+        {renderError('resend')}
 
         <form onSubmit={handleLogin} className="mb-6">
           <div className="mb-6">
