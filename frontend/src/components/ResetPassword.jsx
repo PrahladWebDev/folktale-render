@@ -16,13 +16,38 @@ function ResetPassword() {
     setIsLoading(true);
     setError('');
 
+    // Validate OTP (must be 6 digits)
+    const trimmedOtp = otp.trim();
+    if (!/^\d{6}$/.test(trimmedOtp)) {
+      setError('OTP must be exactly 6 digits');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate newPassword (must match backend requirements)
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long');
+      setIsLoading(false);
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setError('New password must contain at least one uppercase letter');
+      setIsLoading(false);
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setError('New password must contain at least one number');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await axios.post('/api/auth/reset-password', {
-        email,
-        otp,
+        email: email.trim().toLowerCase(),
+        otp: trimmedOtp,
         newPassword,
       });
-      navigate('/login');
+      navigate('/login', { state: { message: 'Password reset successfully! Please log in.' } });
     } catch (error) {
       console.error('Reset password error:', error);
       setError(error.response?.data?.message || 'Password reset failed. Please try again.');
@@ -63,7 +88,10 @@ function ResetPassword() {
               type="text"
               placeholder="Enter 6-digit OTP"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); // Allow only digits, max 6
+                setOtp(value);
+              }}
               required
               maxLength="6"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
@@ -82,16 +110,16 @@ function ResetPassword() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
-              minLength="6"
+              minLength="8"
               className="w-full p-3 rounded-md border-2 border-amber-200 bg-white text-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all duration-300 placeholder-gray-400"
             />
             <p className="mt-1 text-xs text-gray-500">
-              At least 6 characters
+              At least 8 characters, including one uppercase letter and one number
             </p>
           </div>
           <button
             type="submit"
-            disabled={isLoading || !otp || !newPassword}
+            disabled={isLoading || otp.length !== 6 || newPassword.length < 8}
             className="w-full bg-amber-600 text-white p-3 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Resetting Password...' : 'Reset Password'}
@@ -118,4 +146,4 @@ function ResetPassword() {
   );
 }
 
-export default ResetPassword;
+export default ResetPassword
