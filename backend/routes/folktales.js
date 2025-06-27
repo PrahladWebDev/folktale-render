@@ -2,6 +2,7 @@ import express from 'express';
 import Folktale from '../models/Folktale.js';
 import Comment from '../models/Comment.js';
 import Bookmark from '../models/Bookmark.js';
+import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import cloudinary from '../config/cloudinary.js';
@@ -85,7 +86,7 @@ router.post('/generate-story', auth, async (req, res) => {
     res.json({ generatedText });
   } catch (error) {
     console.error('Error generating story:', error.response?.data || error.message);
-    let errorMessage = ' Hawkins';
+    let errorMessage = 'Failed to generate story';
     if (error.code === 'ECONNABORTED') {
       errorMessage = 'Request timed out. Please try again later.';
     } else if (error.response?.data?.error?.message) {
@@ -334,10 +335,29 @@ router.put(
   }
 );
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const folktale = await Folktale.findById(req.params.id);
     if (!folktale) return res.status(404).json({ message: 'Folktale not found' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if subscription has expired
+    if (user.isSubscribed && user.subscriptionExpires < Date.now()) {
+      user.isSubscribed = false;
+      user.subscriptionPlan = null;
+      user.subscriptionExpires = null;
+      await user.save();
+    }
+
+    // Restrict audioUrl for non-subscribed, non-admin users
+    if (!user.isAdmin && !user.isSubscribed && folktale.audioUrl) {
+      folktale.audioUrl = null;
+    }
+
     folktale.views += 1;
     await folktale.save();
     res.json(folktale);
@@ -388,91 +408,6 @@ router.post(
   }
 );
 
-// router.post(
-//   '/:id/comments',
-//   auth,
-//   [
-//     body('content')
-//       .notEmpty()
-//       .withMessage('Comment content is required'),
-//     body('parentId')
-//       .optional({ nullable: true }) // Allow null or undefined
-//       .if(body('parentId').exists()) // Only validate if parentId is provided
-//       .isMongoId()
-//       .withMessage('Invalid parent comment ID'),
-//   ],
-//   async (req, res) => {
-//     try {
-//       const errors = validationResult(req);
-//       if (!errors.isEmpty()) {
-//         return res.status(400).json({ errors: errors.array() });
-//       }
-
-//       const { content, parentId } = req.body;
-//       const userId = req.user.id;
-//       const folktaleId = req.params.id;
-
-//       const folktale = await Folktale.findById(folktaleId);
-//       if (!folktale) {
-//         return res.status(404).json({ message: 'Folktale not found' });
-//       }
-
-//       if (parentId) {
-//         const parentComment = await Comment.findById(parentId);
-//         if (!parentComment) {
-//           return res.status(404).json({ message: 'Parent comment not found' });
-//         }
-//         // Prevent replies to replies
-//         if (parentComment.parentId) {
-//           return res.status(400).json({ message: 'Replies to replies are not allowed' });
-//         }
-//       }
-
-//       const comment = new Comment({
-//         folktaleId,
-//         userId,
-//         content,
-//         parentId: parentId || null,
-//       });
-//       await comment.save();
-
-//       if (parentId) {
-//         await Comment.findByIdAndUpdate(parentId, {
-//           $push: { replies: comment._id },
-//         });
-//       }
-
-//       const populatedComment = await Comment.findById(comment._id)
-//         .populate('userId', 'username')
-//         .populate({
-//           path: 'replies',
-//           populate: { path: 'userId', select: 'username' },
-//         });
-//       res.status(201).json(populatedComment);
-//     } catch (error) {
-//       console.error('Error posting comment:', error);
-//       res.status(500).json({ message: error.message || 'Server error' });
-//     }
-//   }
-// );
-
-// router.get('/:id/comments', async (req, res) => {
-//   try {
-//     const comments = await Comment.find({ 
-//       folktaleId: req.params.id, 
-//       parentId: null 
-//     })
-//       .populate('userId', 'username')
-//       .populate({
-//         path: 'replies',
-//         populate: { path: 'userId', select: 'username' },
-//       });
-//     res.json(comments);
-//   } catch (error) {
-//     console.error('Error fetching comments:', error);
-//     res.status(500).json({ message: 'Server error' });
-//   }
-// });
 router.post(
   '/:id/comments',
   auth,
@@ -558,7 +493,6 @@ router.get('/:id/comments', async (req, res) => {
   }
 });
 
-
 router.delete('/:id', auth, async (req, res) => {
   try {
     const folktale = await Folktale.findById(req.params.id);
@@ -566,7 +500,6 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Folktale not found' });
     }
 
-    // Delete associated comments and their replies
     await Comment.deleteMany({ 
       $or: [
         { folktaleId: req.params.id },
