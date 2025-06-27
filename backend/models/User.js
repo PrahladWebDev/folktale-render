@@ -45,6 +45,19 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  isSubscribed: {
+    type: Boolean,
+    default: false,
+  },
+  subscriptionPlan: {
+    type: String,
+    enum: ['monthly', 'yearly', null],
+    default: null,
+  },
+  subscriptionExpires: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
 });
