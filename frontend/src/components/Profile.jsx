@@ -14,10 +14,12 @@ import {
   FaImage,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ username: "", email: "", isAdmin: false, profileImageUrl: "" });
+  const [user, setUser] = useState({ username: "", email: "", isAdmin: false, profileImageUrl: "", isSubscribed: false, subscriptionPlan: null, subscriptionExpires: null });
   const [formData, setFormData] = useState({ username: "", password: "", profileImage: null });
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState([]);
@@ -28,9 +30,21 @@ function Profile() {
   const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dvws2chvw/image/upload/v1750929194/user_profiles/jwkack4vcko50qfaawfn.png";
 
   useEffect(() => {
+    // Load Razorpay script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       if (!token) {
-        navigate("/login");
+        toast.warning('Please log in to view your profile.');
+        setTimeout(() => navigate('/login'), 2000);
         return;
       }
       try {
@@ -42,6 +56,9 @@ function Profile() {
           email: response.data.user.email,
           isAdmin: response.data.user.isAdmin,
           profileImageUrl: response.data.user.profileImageUrl || DEFAULT_PROFILE_IMAGE,
+          isSubscribed: response.data.user.isSubscribed,
+          subscriptionPlan: response.data.user.subscriptionPlan,
+          subscriptionExpires: response.data.user.subscriptionExpires,
         });
         setFormData({ username: response.data.user.username, password: "", profileImage: null });
       } catch (error) {
@@ -135,7 +152,11 @@ function Profile() {
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      if (error.response?.data?.errors) {
+      if (error.response?.status === 401) {
+        toast.warning('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else {
         setErrors([{ 
@@ -147,6 +168,86 @@ function Profile() {
       setIsUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const handleSubscribe = async (plan) => {
+    if (!token) {
+      toast.warning('Please log in to subscribe.');
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        '/api/auth/create-subscription-order',
+        { plan },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const { orderId, amount, currency, plan: selectedPlan } = response.data;
+
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+        amount: amount,
+        currency: currency,
+        name: 'Legend Sansar',
+        description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Subscription`,
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            const verifyResponse = await axios.post(
+              '/api/auth/verify-subscription',
+              {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                plan: selectedPlan,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setUser({
+              ...user,
+              isSubscribed: verifyResponse.data.user.isSubscribed,
+              subscriptionPlan: verifyResponse.data.user.subscriptionPlan,
+              subscriptionExpires: verifyResponse.data.user.subscriptionExpires,
+            });
+            toast.success('Subscription activated successfully!');
+          } catch (err) {
+            console.error('Error verifying subscription:', err);
+            toast.error(err.response?.data?.message || 'Failed to verify subscription.');
+          }
+        },
+        prefill: {
+          name: user.username,
+          email: user.email,
+        },
+        theme: {
+          color: '#D97706',
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (response) => {
+        toast.error('Payment failed. Please try again.');
+        console.error('Payment failed:', response.error);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('Error creating subscription order:', err);
+      if (err.response?.status === 401) {
+        toast.warning('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to initiate subscription.');
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    toast.success('Logged out successfully!');
+    setTimeout(() => navigate('/login'), 2000);
   };
 
   const renderError = (field) => {
@@ -195,6 +296,8 @@ function Profile() {
         transition={{ duration: 0.3 }}
         className="bg-white rounded-xl shadow-lg border-2 border-amber-200 p-8 max-w-md w-full"
       >
+        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} closeOnClick pauseOnHover />
+        
         <div className="flex justify-center mb-6">
           <motion.div whileHover={{ scale: 1.1 }} className="relative">
             <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 overflow-hidden">
@@ -264,6 +367,39 @@ function Profile() {
                 <p className="font-medium">{user.isAdmin ? "Administrator" : "Standard User"}</p>
               </div>
             </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="bg-amber-50 rounded-xl p-4 space-y-3">
+            <h3 className="text-lg font-semibold text-amber-900">Subscription Status</h3>
+            {user.isSubscribed ? (
+              <div className="text-gray-700">
+                <p><strong>Plan:</strong> {user.subscriptionPlan.charAt(0).toUpperCase() + user.subscriptionPlan.slice(1)}</p>
+                <p><strong>Expires:</strong> {new Date(user.subscriptionExpires).toLocaleDateString()}</p>
+                <p className="text-green-600 font-semibold">You have access to exclusive podcasts!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-gray-600">No active subscription. Subscribe to access exclusive podcasts.</p>
+                <div className="flex gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSubscribe('monthly')}
+                    className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-all duration-300"
+                  >
+                    Monthly (₹100)
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleSubscribe('yearly')}
+                    className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-all duration-300"
+                  >
+                    Yearly (₹1000)
+                  </motion.button>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {isEditing ? (
@@ -394,7 +530,7 @@ function Profile() {
               </motion.div>
             </motion.form>
           ) : (
-            <motion.div variants={itemVariants} className="pt-2">
+            <motion.div variants={itemVariants} className="space-y-3 pt-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -402,6 +538,14 @@ function Profile() {
                 className="w-full px-4 py-3 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 shadow-md transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <FaUserEdit /> Edit Profile
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                className="w-full px-4 py-3 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 shadow-md transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                Logout
               </motion.button>
             </motion.div>
           )}
