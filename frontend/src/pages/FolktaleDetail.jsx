@@ -1,643 +1,518 @@
-// FolktaleDetail.jsx
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import express from 'express';
+import Folktale from '../models/Folktale.js';
+import Comment from '../models/Comment.js';
+import Bookmark from '../models/Bookmark.js';
+import User from '../models/User.js';
+import { auth } from '../middleware/auth.js';
+import { body, validationResult } from 'express-validator';
+import cloudinary from '../config/cloudinary.js';
+import multer from 'multer';
 import axios from 'axios';
-import CommentSection from '../components/CommentSection';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { BsBookmark, BsBookmarkFill, BsChat, BsArrowLeft, BsArrowRight, BsShare, BsDownload } from 'react-icons/bs';
-import { FaStar } from 'react-icons/fa';
-import { Helmet } from 'react-helmet-async';
-import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, EmailShareButton, FacebookIcon, TwitterIcon, WhatsappIcon, EmailIcon } from 'react-share';
-import jsPDF from 'jspdf';
-import * as htmlToImage from 'html-to-image';
+import path from 'path';
+import dotenv from 'dotenv';
+import fs from 'fs/promises';
 
-// SimilarFolktales Component
-function SimilarFolktales({ genre, currentFolktaleId }) {
-  const [similarFolktales, setSimilarFolktales] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const scrollRef = useRef(null);
-  const navigate = useNavigate();
+const router = express.Router();
+dotenv.config();
 
-  useEffect(() => {
-    const fetchSimilarFolktales = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get('/api/folktales', {
-          params: { genre, limit: 10 },
-        });
-        const filteredFolktales = response.data.folktales.filter(
-          (folktale) => folktale._id !== currentFolktaleId
-        );
-        setSimilarFolktales(filteredFolktales);
-      } catch (err) {
-        console.error('Error fetching similar legends:', err);
-        setError('Failed to load similar legends.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, '/tmp');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
 
-    if (genre) fetchSimilarFolktales();
-  }, [genre, currentFolktaleId]);
-
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === 'left' ? -300 : 300;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|mp3/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = /image\/(jpeg|png)|audio\/(mp3|mpeg)/.test(file.mimetype);
+    console.log('File validation:', { 
+      name: file.originalname, 
+      mimetype: file.mimetype, 
+      extname: path.extname(file.originalname).toLowerCase(),
+      valid: extname && mimetype 
+    });
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Images (jpeg, jpg, png) or audio (mp3, mpeg) only'));
     }
-  };
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});
 
-  if (isLoading) return <div className="text-center p-4 text-amber-900 font-caveat">Loading similar legends...</div>;
-  if (error) return <div className="text-center p-4 text-red-600 font-caveat">{error}</div>;
-  if (similarFolktales.length === 0) return (
-    <div className="text-center p-4 text-gray-600 font-caveat">
-      No similar legend found in this genre.
-    </div>
-  );
+const uploadFields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'audio', maxCount: 1 },
+]);
 
-  return (
-    <div className="my-10">
-      <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-        You might also like:
-      </h2>
-      <div className="relative">
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-amber-600 text-white p-2 rounded-full shadow-md hover:bg-amber-700 z-10"
-          aria-label="Scroll left"
-        >
-          <BsArrowLeft className="text-xl" />
-        </button>
-        <div ref={scrollRef} className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide">
-          {similarFolktales.map((folktale) => (
-            <div
-              key={folktale._id}
-              className="flex-none w-64 bg-white rounded-lg shadow-md border-2 border-amber-200 cursor-pointer hover:shadow-lg transition-all duration-300"
-              onClick={() => navigate(`/folktale/${folktale._id}`)} // Fixed navigation
-            >
-              <img
-                src={folktale.imageUrl}
-                alt={folktale.title}
-                className="w-full h-40 object-cover rounded-t-lg" // Fixed className, removed invalid class
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/256x160?text=No+Image'; // Fixed URL
-                }}
-              />
-              <div className="p-4"> {/* Fixed className */}
-                <h3 className="text-lg font-bold text-amber-900 truncate">{folktale.title}</h3> {/* Fixed className */}
-                <p className="text-sm text-gray-600">Region: {folktale.region}</p> {/* Unified className */}
-                <p className="text-sm text-gray-600">Age Group: {folktale.ageGroup}</p> {/* Unified className */}
-                <div className="flex items-center mt-2">
-                  <FaStar className="text-amber-600 mr-1" />
-                  <span className="text-sm text-gray-600">
-                    {folktale.ratings?.length
-                      ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1)
-                      : 'No ratings'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-amber-600 text-white p-2 rounded-full shadow-md hover:bg-amber-700 z-10"
-          aria-label="Scroll right"
-        >
-          <BsArrowRight className="text-xl" />
-        </button>
-      </div>
-    </div>
-  );
-}
+router.post('/generate-story', auth, async (req, res) => {
+  const { genre, region, ageGroup } = req.body;
 
-// FolktaleDetail Component (unchanged from previous solution, included for completeness)
-function FolktaleDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [folktale, setFolktale] = useState(null);
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [commentCount, setCommentCount] = useState(0);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const token = localStorage.getItem('token');
-  const commentSectionRef = useRef(null);
-  const imageRef = useRef(null);
+  if (!genre || !region || !ageGroup) {
+    return res.status(400).json({ message: 'Genre, region, and age group are required.' });
+  }
 
-  const shareUrl = `${window.location.origin}/folktale/${id}`;
-  const shareTitle = folktale?.title || 'Discover a Fascinating Folktale!';
-  const shareDescription = folktale?.content
-    ? `${folktale.content.replace(/<[^>]+>/g, '').slice(0, 160)}... Read more at ${window.location.origin}!`
-    : 'Explore a captivating folktale from around the world. Dive into the story now!';
-  const shareImage = folktale?.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale+Image';
-
-  useEffect(() => {
-    const fetchFolktaleAndBookmarks = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [folktaleResponse, commentsResponse] = await Promise.all([
-          axios.get(`/api/folktales/${id}`),
-          axios.get(`/api/folktales/${id}/comments`),
-        ]);
-
-        if (!folktaleResponse.data || typeof folktaleResponse.data !== 'object') {
-          throw new Error('Invalid legend data received');
-        }
-        setFolktale(folktaleResponse.data);
-
-        const comments = commentsResponse.data || [];
-        const totalComments = comments.reduce(
-          (count, comment) => count + 1 + (comment.replies?.length || 0),
-          0
-        );
-        setCommentCount(totalComments);
-
-        if (token) {
-          try {
-            const bookmarkResponse = await axios.get('/api/folktales/bookmark', {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!Array.isArray(bookmarkResponse.data)) throw new Error('Unexpected bookmark response format');
-            setIsBookmarked(bookmarkResponse.data.some((bookmark) => bookmark.folktaleId && bookmark.folktaleId._id === id));
-          } catch (bookmarkError) {
-            if (bookmarkError.response?.status === 401) {
-              toast.warning('Session expired. Please log in again.');
-              localStorage.removeItem('token');
-              navigate('/login');
-            } else {
-              console.error('Bookmark fetch error:', bookmarkError);
-              toast.error('Failed to fetch bookmark status.');
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching legend:', err);
-        setError(err.response?.status === 404 ? 'Folktale not found.' : err.code === 'ERR_NETWORK' ? 'Network error. Please check your connection and try again.' : 'Failed to load legend. Please try again later.');
-      } finally {
-        setIsLoading(false);
+  try {
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: `Generate a ${genre} folktale from ${region} suitable for ${ageGroup}. The story should be engaging, culturally relevant, and appropriate for the selected age group. Provide a title prefixed with "Title:" followed by the story content.`,
+          },
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
       }
-    };
-    fetchFolktaleAndBookmarks();
-  }, [id, token, navigate]);
+    );
 
-  const handleDownloadPDF = async () => {
-    if (!token) {
-      toast.warning('Please log in to download the legend as PDF.');
-      setTimeout(() => navigate('/login'), 2000);
-      return;
+    const generatedText = response.data.choices[0].message.content;
+    res.json({ generatedText });
+  } catch (error) {
+    console.error('Error generating story:', error.response?.data || error.message);
+    let errorMessage = 'Failed to generate story';
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. Please try again later.';
+    } else if (error.response?.data?.error?.message) {
+      errorMessage = error.response.data.error.message;
     }
+    res.status(500).json({ message: errorMessage });
+  }
+});
 
+router.post(
+  '/',
+  auth,
+  uploadFields,
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('content').notEmpty().withMessage('Content is required'),
+    body('region').notEmpty().withMessage('Region is required'),
+    body('genre').notEmpty().withMessage('Genre is required'),
+    body('ageGroup').notEmpty().withMessage('Age group is required'),
+  ],
+  async (req, res) => {
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - 2 * margin;
-      let yOffset = margin;
+      console.log('Uploaded files:', req.files);
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
 
-      const amber900 = [120, 79, 23];
-      const gray600 = [75, 85, 99];
-      const amber200 = [253, 230, 138];
+      if (!req.files || !req.files.image) {
+        return res.status(400).json({ message: 'Image is required' });
+      }
 
-      doc.setFont('Helvetica', 'normal');
+      const imageFile = req.files.image[0];
+      const audioFile = req.files.audio ? req.files.audio[0] : null;
 
-      if (imageRef.current && folktale.imageUrl) {
+      const imageResult = await cloudinary.uploader.upload(imageFile.path, {
+        folder: 'folktales',
+      });
+      console.log('Image uploaded:', imageResult.secure_url);
+      await fs.unlink(imageFile.path);
+
+      let audioUrl = null;
+      if (audioFile) {
         try {
-          const imgData = await htmlToImage.toPng(imageRef.current);
-          const imgProps = doc.getImageProperties(imgData);
-          const imgWidth = maxWidth;
-          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-          doc.addImage(imgData, 'PNG', margin, yOffset, imgWidth, imgHeight);
-          yOffset += imgHeight + 15;
-        } catch (imgError) {
-          console.error('Error adding image to PDF:', imgError);
+          const audioResult = await cloudinary.uploader.upload(audioFile.path, {
+            folder: 'folktales_audio',
+            resource_type: 'video',
+          });
+          audioUrl = audioResult.secure_url;
+          console.log('Audio uploaded:', audioUrl);
+          await fs.unlink(audioFile.path);
+        } catch (cloudinaryError) {
+          console.error('Cloudinary audio upload error:', cloudinaryError);
+          await fs.unlink(audioFile.path);
+          return res.status(500).json({ message: 'Failed to upload audio file' });
         }
       }
 
-      doc.setFontSize(24);
-      doc.setTextColor(...amber900);
-      const titleLines = doc.splitTextToSize(folktale.title, maxWidth);
-      doc.text(titleLines, margin, yOffset);
-      yOffset += titleLines.length * 10 + 15;
-
-      doc.setFontSize(12);
-      doc.setTextColor(...gray600);
-      doc.text(`Region: ${folktale.region}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Genre: ${folktale.genre}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Age Group: ${folktale.ageGroup}`, margin, yOffset);
-      yOffset += 10;
-      doc.text(`Rating: ${folktale.ratings?.length ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1) : 'No ratings'}`, margin, yOffset);
-      yOffset += 20;
-
-      doc.setFontSize(14);
-      const plainText = folktale.content.replace(/<[^>]+>/g, '');
-      const contentLines = doc.splitTextToSize(plainText, maxWidth);
-      let pageCount = 1;
-
-      contentLines.forEach((line) => {
-        if (yOffset + 10 > pageHeight - margin) {
-          doc.addPage();
-          pageCount++;
-          yOffset = margin;
-          doc.setFontSize(12);
-          doc.setTextColor(...gray600);
-          doc.text(`Page ${pageCount}`, pageWidth - margin - 20, yOffset);
-          yOffset += 15;
-          doc.setFontSize(14);
-          doc.setTextColor(...gray600);
-        }
-        doc.text(line, margin, yOffset);
-        yOffset += 10;
+      const folktale = new Folktale({
+        title: req.body.title,
+        content: req.body.content,
+        region: req.body.region,
+        genre: req.body.genre,
+        ageGroup: req.body.ageGroup,
+        imageUrl: imageResult.secure_url,
+        audioUrl,
       });
 
-      doc.setDrawColor(...amber200);
-      doc.line(margin, pageHeight - margin, pageWidth - margin, pageHeight - margin);
-      doc.setFontSize(10);
-      doc.setTextColor(...gray600);
-      doc.text(`Generated from ${window.location.origin}`, margin, pageHeight - margin + 10);
-
-      doc.save(`${folktale.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
-      toast.success('PDF downloaded successfully!');
+      await folktale.save();
+      res.status(201).json(folktale);
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF. Please try again.');
+      console.error('Error creating folktale:', error);
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+      res.status(500).json({ message: error.message || 'Server error' });
     }
-  };
+  }
+);
 
-  const handleRate = async () => {
-    if (!token) {
-      toast.warning('Please log in to rate this legend.');
-      setTimeout(() => navigate('/login'), 2000);
-      return;
+router.get('/', async (req, res) => {
+  const { page = 1, limit = 12, region, genre, ageGroup, search } = req.query;
+  const query = {};
+  if (region) query.region = region;
+  if (genre) query.genre = genre;
+  if (ageGroup) query.ageGroup = ageGroup;
+  if (search) query.title = { $regex: search, $options: 'i' };
+
+  try {
+    const folktales = await Folktale.find(query)
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+    const total = await Folktale.countDocuments(query);
+    res.json({ folktales, total });
+  } catch (error) {
+    console.error('Error fetching folktales:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/popular', async (req, res) => {
+  try {
+    const folktales = await Folktale.find().sort({ views: -1 }).limit(5);
+    res.json(folktales);
+  } catch (error) {
+    console.error('Error fetching popular folktales:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/random', async (req, res) => {
+  try {
+    const count = await Folktale.countDocuments();
+    const random = Math.floor(Math.random() * count);
+    const folktale = await Folktale.findOne().skip(random);
+    res.json(folktale);
+  } catch (error) {
+    console.error('Error fetching random folktale:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/bookmarks', auth, async (req, res) => {
+  try {
+    const { folktaleId } = req.body;
+    const userId = req.user.id;
+
+    const folktale = await Folktale.findById(folktaleId);
+    if (!folktale) {
+      return res.status(404).json({ message: 'Folktale not found' });
     }
-    if (rating === 0) {
-      toast.warning('Please select a rating before submitting.');
-      return;
+
+    const existingBookmark = await Bookmark.findOne({ userId, folktaleId });
+    if (existingBookmark) {
+      return res.status(400).json({ message: 'Folktale already bookmarked' });
     }
+
+    const bookmark = new Bookmark({
+      userId,
+      folktaleId,
+    });
+    await bookmark.save();
+
+    const populatedBookmark = await Bookmark.findById(bookmark._id)
+      .populate('folktaleId', 'title region genre imageUrl audioUrl ageGroup');
+    res.status(201).json(populatedBookmark);
+  } catch (error) {
+    console.error('Error adding bookmark:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/bookmark', auth, async (req, res) => {
+  try {
+    const bookmarks = await Bookmark.find({ userId: req.user.id })
+      .populate('folktaleId', 'title region genre imageUrl audioUrl ageGroup');
+    res.json(bookmarks);
+  } catch (error) {
+    console.error('Error fetching bookmarks:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/bookmarks/:folktaleId', auth, async (req, res) => {
+  try {
+    const bookmark = await Bookmark.findOneAndDelete({
+      userId: req.user.id,
+      folktaleId: req.params.folktaleId,
+    });
+    if (!bookmark) {
+      return res.status(404).json({ message: 'Bookmark not found' });
+    }
+    res.json({ message: 'Bookmark removed' });
+  } catch (error) {
+    console.error('Error removing bookmark:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put(
+  '/:id',
+  auth,
+  uploadFields,
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('content').notEmpty().withMessage('Content is required'),
+    body('region').notEmpty().withMessage('Region is required'),
+    body('genre').notEmpty().withMessage('Genre is required'),
+    body('ageGroup').notEmpty().withMessage('Age group is required'),
+  ],
+  async (req, res) => {
     try {
-      const response = await axios.post(
-        `/api/folktales/${id}/rate`,
-        { rating },
-        { headers: { Authorization: `Bearer ${token}` } }
+      console.log('Uploaded files for update:', req.files);
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const folktale = await Folktale.findById(req.params.id);
+      if (!folktale) {
+        if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+        if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+        return res.status(404).json({ message: 'Folktale not found' });
+      }
+
+      folktale.title = req.body.title;
+      folktale.content = req.body.content;
+      folktale.region = req.body.region;
+      folktale.genre = req.body.genre;
+      folktale.ageGroup = req.body.ageGroup;
+
+      if (req.files?.image?.[0]) {
+        const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, {
+          folder: 'folktales',
+        });
+        console.log('Image updated:', imageResult.secure_url);
+        await fs.unlink(req.files.image[0].path);
+        folktale.imageUrl = imageResult.secure_url;
+      }
+
+      if (req.files?.audio?.[0]) {
+        try {
+          const audioResult = await cloudinary.uploader.upload(req.files.audio[0].path, {
+            folder: 'folktales_audio',
+            resource_type: 'video',
+          });
+          console.log('Audio updated:', audioResult.secure_url);
+          await fs.unlink(req.files.audio[0].path);
+          folktale.audioUrl = audioResult.secure_url;
+        } catch (cloudinaryError) {
+          console.error('Cloudinary audio update error:', cloudinaryError);
+          await fs.unlink(req.files.audio[0].path);
+          return res.status(500).json({ message: 'Failed to upload audio file' });
+        }
+      }
+
+      await folktale.save();
+      res.json(folktale);
+    } catch (error) {
+      console.error('Error updating folktale:', error);
+      if (req.files?.image?.[0]?.path) await fs.unlink(req.files.image[0].path).catch(() => {});
+      if (req.files?.audio?.[0]?.path) await fs.unlink(req.files.audio[0].path).catch(() => {});
+      res.status(500).json({ message: error.message || 'Server error' });
+    }
+  }
+);
+
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const folktale = await Folktale.findById(req.params.id);
+    if (!folktale) return res.status(404).json({ message: 'Folktale not found' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if subscription has expired
+    if (user.isSubscribed && user.subscriptionExpires < Date.now()) {
+      user.isSubscribed = false;
+      user.subscriptionPlan = null;
+      user.subscriptionExpires = null;
+      await user.save();
+    }
+
+    // Restrict audioUrl for non-subscribed, non-admin users
+    if (!user.isAdmin && !user.isSubscribed && folktale.audioUrl) {
+      folktale.audioUrl = null;
+    }
+
+    folktale.views += 1;
+    await folktale.save();
+    res.json(folktale);
+  } catch (error) {
+    console.error('Error fetching folktale:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post(
+  '/:id/rate',
+  auth,
+  [
+    body('rating')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('Rating must be an integer between 1 and 5'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { rating } = req.body;
+      const userId = req.user.id;
+      const folktaleId = req.params.id;
+
+      const folktale = await Folktale.findById(folktaleId);
+      if (!folktale) {
+        return res.status(404).json({ message: 'Folktale not found' });
+      }
+
+      const existingRating = folktale.ratings.find(
+        (r) => r.userId.toString() === userId
       );
-      setFolktale(response.data);
-      toast.success('Rating submitted successfully!');
+      if (existingRating) {
+        return res.status(400).json({ message: 'You have already rated this folktale' });
+      }
+
+      folktale.ratings.push({ userId, rating });
+      await folktale.save();
+      res.json(folktale);
     } catch (error) {
       console.error('Error rating folktale:', error);
-      if (error.response?.status === 401) {
-        toast.warning('Session expired. Please log in again.');
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Network error. Please check your connection.');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to submit rating.');
-      }
+      res.status(500).json({ message: 'Server error' });
     }
-  };
+  }
+);
 
-  const handleBookmark = async () => {
-    if (!token) {
-      toast.warning('Please log in to bookmark this legend.');
-      setTimeout(() => navigate('/login'), 2000);
-      return;
-    }
+router.post(
+  '/:id/comments',
+  auth,
+  [
+    body('content')
+      .notEmpty()
+      .withMessage('Comment content is required'),
+    body('parentId')
+      .optional({ nullable: true })
+      .if(body('parentId').exists())
+      .isMongoId()
+      .withMessage('Invalid parent comment ID'),
+  ],
+  async (req, res) => {
     try {
-      if (isBookmarked) {
-        await axios.delete(`/api/folktales/bookmarks/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-        setIsBookmarked(false);
-        toast.success('Bookmark removed.');
-      } else {
-        await axios.post(`/api/folktales/bookmarks`, { folktaleId: id }, { headers: { Authorization: `Bearer ${token}` } });
-        setIsBookmarked(true);
-        toast.success('Legend bookmarked!');
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
       }
+
+      const { content, parentId } = req.body;
+      const userId = req.user.id;
+      const folktaleId = req.params.id;
+
+      const folktale = await Folktale.findById(folktaleId);
+      if (!folktale) {
+        return res.status(404).json({ message: 'Folktale not found' });
+      }
+
+      if (parentId) {
+        const parentComment = await Comment.findById(parentId);
+        if (!parentComment) {
+          return res.status(404).json({ message: 'Parent comment not found' });
+        }
+        if (parentComment.parentId) {
+          return res.status(400).json({ message: 'Replies to replies are not allowed' });
+        }
+      }
+
+      const comment = new Comment({
+        folktaleId,
+        userId,
+        content,
+        parentId: parentId || null,
+      });
+      await comment.save();
+
+      if (parentId) {
+        await Comment.findByIdAndUpdate(parentId, {
+          $push: { replies: comment._id },
+        });
+      }
+
+      const populatedComment = await Comment.findById(comment._id)
+        .populate('userId', 'username isAdmin')
+        .populate({
+          path: 'replies',
+          populate: { path: 'userId', select: 'username isAdmin' },
+        });
+      res.status(201).json(populatedComment);
     } catch (error) {
-      console.error('Bookmark error:', error);
-      if (error.response?.status === 401) {
-        toast.warning('Session expired. Please log in again.');
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Network error. Please check your connection.');
-      } else {
-        toast.error('Failed to update bookmark.');
-      }
+      console.error('Error posting comment:', error);
+      res.status(500).json({ message: error.message || 'Server error' });
     }
-  };
+  }
+);
 
-  const handleAudioPlay = () => {
-    if (!token) {
-      toast.warning('Please log in to listen to the podcast.');
-      setTimeout(() => navigate('/login'), 2000);
-      return false;
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const comments = await Comment.find({ 
+      folktaleId: req.params.id, 
+      parentId: null 
+    })
+      .populate('userId', 'username isAdmin')
+      .populate({
+        path: 'replies',
+        populate: { path: 'userId', select: 'username isAdmin' },
+      });
+    res.json(comments);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const folktale = await Folktale.findById(req.params.id);
+    if (!folktale) {
+      return res.status(404).json({ message: 'Folktale not found' });
     }
-    return true;
-  };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: shareTitle, text: shareDescription, url: shareUrl });
-      } catch (err) {
-        console.error('Error sharing:', err);
-        setShowShareModal(true);
-      }
-    } else {
-      setShowShareModal(true);
-    }
-  };
+    await Comment.deleteMany({ 
+      $or: [
+        { folktaleId: req.params.id },
+        { parentId: { $in: await Comment.find({ folktaleId: req.params.id }).distinct('_id') } },
+      ],
+    });
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    toast.success('Link copied to clipboard!');
-    setShowShareModal(false);
-  };
+    await Folktale.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Folktale and associated comments deleted' });
+  } catch (error) {
+    console.error('Error deleting folktale:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-  if (isLoading) return <div className="text-center p-12 text-lg text-amber-900 font-caveat animate-pulse">Loading Legend...</div>;
-  if (error) return <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">{error}</div>;
-  if (!folktale) return <div className="text-center p-12 text-lg text-red-600 font-caveat bg-amber-100 rounded-lg border-2 border-amber-200 mx-auto max-w-md animate-shake">No Legend data available.</div>;
-
-  const averageRating = folktale.ratings?.length
-    ? (folktale.ratings.reduce((sum, r) => sum + r.rating, 0) / folktale.ratings.length).toFixed(1)
-    : 'No ratings';
-
-  return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 font-caveat text-gray-800 animate-fade-in">
-      <Helmet>
-        <title>{shareTitle}</title>
-        <meta name="description" content={shareDescription} />
-        <meta property="og:title" content={shareTitle} />
-        <meta property="og:description" content={shareDescription} />
-        <meta property="og:image" content={shareImage} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:url" content={shareUrl} />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={shareTitle} />
-        <meta name="twitter:description" content={shareDescription} />
-        <meta name="twitter:image" content={shareImage} />
-      </Helmet>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar closeOnClick pauseOnHover theme="light" />
-
-      <div className="bg-white rounded-lg p-6 sm:p-8 shadow-md border-2 border-amber-200">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-4xl font-bold text-amber-900 mb-4 animate-pulse">{folktale.title}</h1>
-          <div className="flex flex-wrap justify-center gap-3 mb-5 items-center text-sm">
-            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
-              <strong className="text-amber-900">Region:</strong> {folktale.region}
-            </span>
-            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
-              <strong className="text-amber-900">Genre:</strong> {folktale.genre}
-            </span>
-            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
-              <strong className="text-amber-900">Age Group:</strong> {folktale.ageGroup}
-            </span>
-            <span className="bg-amber-50 px-3 py-1 rounded-full text-gray-600">
-              <strong className="text-amber-900">Rating:</strong> {averageRating}
-              <span className="ml-1 text-amber-600">⭐</span>
-              {folktale.ratings.length > 0 && <span className="ml-1 text-xs text-gray-500">({folktale.ratings.length} ratings)</span>}
-            </span>
-            <button
-              onClick={handleBookmark}
-              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
-              title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-              aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-            >
-              {isBookmarked ? <BsBookmarkFill className="text-2xl" /> : <BsBookmark className="text-2xl" />}
-            </button>
-            <button
-              onClick={() => setShowComments(true)}
-              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200 relative"
-              title="View comments"
-              aria-label={`View ${commentCount} comments`}
-            >
-              <BsChat className="text-2xl" />
-              {commentCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs rounded-full px-1.5 py-0.5">{commentCount}</span>
-              )}
-            </button>
-            <button
-              onClick={handleShare}
-              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200"
-              title="Share folktale"
-              aria-label="Share folktale"
-            >
-              <BsShare className="text-2xl" />
-            </button>
-            <button
-              onClick={handleDownloadPDF}
-              className="bg-transparent border-none cursor-pointer p-1 text-amber-900 hover:text-amber-700 transition-colors duration-200 transform hover:scale-105"
-              title="Download as PDF"
-              aria-label="Download folktale as PDF"
-            >
-              <BsDownload className="text-2xl" />
-            </button>
-          </div>
-        </div>
-
-        <div className="max-w-3xl mx-auto mb-8 rounded-lg overflow-hidden shadow-lg border-2 border-amber-200">
-          <img
-            ref={imageRef}
-            src={folktale.imageUrl}
-            alt={folktale.title}
-            className="w-full h-auto object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/800x400?text=No+Image';
-            }}
-          />
-        </div>
-
-        {folktale.audioUrl && (
-          <div className="max-w-3xl mx-auto mb-8 p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
-            <h2 className="text-xl sm:text-2xl font-bold text-amber-900 mb-4">Listen to the Podcast</h2>
-            {token ? (
-              <audio controls className="w-full" onPlay={handleAudioPlay}>
-                <source src={folktale.audioUrl} type="audio/mpeg" />
-                Your browser does not support the audio element.
-              </audio>
-            ) : (
-              <div className="text-center">
-                <p className="text-lg text-gray-600 mb-4 font-semibold">Please log in to listen to the podcast.</p>
-                <button
-                  className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                  onClick={() => {
-                    toast.warning('Please log in to listen to the podcast.');
-                    setTimeout(() => navigate('/login'), 2000);
-                  }}
-                >
-                  Log in or Register
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {folktale.ageGroup === 'Adults' && (
-          <div className="bg-amber-100 text-amber-800 p-4 rounded-lg border-2 border-amber-200 mb-6 text-base animate-shake">
-            <p><strong className="text-amber-900">⚠️ Warning:</strong> This Legend contains content intended for adult readers.</p>
-          </div>
-        )}
-
-        <div className="my-10">
-          <h2 className="text-xl sm:text-2xl font-bold text-amber-900 border-b-2 border-amber-300 pb-2 mb-5">
-            {(() => {
-              switch (folktale.genre) {
-                case 'Conspiracy Theory': return 'The Theory';
-                case 'Fable': return 'The Fable';
-                case 'Myth': return 'The Myth';
-                case 'Legend': return 'The Legend';
-                case 'Fairy Tale': return 'The Fairy Tale';
-                case 'Horror': return 'The Horror Story';
-                case 'Fantasy': return 'The Fantasy';
-                case 'Adventure': return 'The Adventure';
-                case 'Mystery': return 'The Mystery';
-                case 'Historical': return 'The Historical Tale';
-                case 'Ghost Story': return 'The Ghost Story';
-                case 'Supernatural': return 'The Supernatural Tale';
-                case 'Tragedy': return 'The Tragedy';
-                case 'Moral Tale': return 'The Moral Tale';
-                case 'Urban Legend': return 'The Urban Legend';
-                case 'Comedy': return 'The Comedy';
-                case 'Parable': return 'The Parable';
-                case 'Epic': return 'The Epic';
-                case 'Romance': return 'The Romance';
-                case 'Unsolved Mysteries': return 'The Mystery';
-                case 'Supernatural/Paranormal Entities': return 'The Entity';
-                default: return 'The Story';
-              }
-            })()}
-          </h2>
-          <div className="text-lg leading-relaxed">
-            {token ? (
-              <div className="mb-5 prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: folktale.content }} />
-            ) : (
-              <>
-                <div className="mb-5 prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: folktale.content.slice(0, 300) + '...' }} />
-                <div className="text-center p-6 bg-amber-50 rounded-lg border-2 border-amber-200">
-                  <p className="text-lg text-gray-600 mb-4 font-semibold">Want to read the full story?</p>
-                  <button
-                    className="bg-amber-900 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-800 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                    onClick={() => navigate('/login')}
-                  >
-                    Log in or Register
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {token && (
-          <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
-            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
-            <div className="flex gap-4 items-center flex-wrap">
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <FaStar
-                    key={star}
-                    className={`text-2xl cursor-pointer transition-colors duration-200 ${star <= (hoverRating || rating) ? 'text-amber-600' : 'text-gray-300'}`}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={handleRate}
-                className="bg-amber-600 text-white px-5 py-2 rounded-md text-lg font-bold hover:bg-amber-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                aria-label="Submit rating"
-              >
-                Submit Rating
-              </button>
-            </div>
-          </div>
-        )}
-
-        <SimilarFolktales genre={folktale.genre} currentFolktaleId={id} />
-
-        {showComments && (
-          <div
-            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ease-in-out"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="comments-title"
-          >
-            <div className="flex justify-between items-center p-4 border-b-2 border-amber-200">
-              <h3 id="comments-title" className="text-2xl font-bold text-amber-900">Comments ({commentCount})</h3>
-              <button
-                onClick={() => setShowComments(false)}
-                className="text-amber-900 hover:text-amber-700 text-xl font-bold"
-                aria-label="Close comments"
-              >
-                Close
-              </button>
-            </div>
-            <CommentSection
-              folktaleId={id}
-              ref={commentSectionRef}
-              onCommentPosted={() => {
-                axios.get(`/api/folktales/${id}/comments`).then((res) => {
-                  const totalComments = res.data.reduce((count, comment) => count + 1 + (comment.replies?.length || 0), 0);
-                  setCommentCount(totalComments);
-                });
-              }}
-            />
-          </div>
-        )}
-
-        {showShareModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 id="share-modal-title" className="text-xl font-bold text-amber-900">Share this Folktale</h3>
-                <button onClick={() => setShowShareModal(false)} className="text-amber-900 hover:text-amber-700 text-xl font-bold" aria-label="Close share modal">
-                  Close
-                </button>
-              </div>
-              <div className="mb-4">
-                <img
-                  src={shareImage}
-                  alt={shareTitle}
-                  className="w-full h-40 object-cover rounded-lg mb-2"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = 'https://via.placeholder.com/800x400?text=Folktale+Image';
-                  }}
-                />
-                <p className="text-lg font-semibold text-amber-900">{shareTitle}</p>
-                <p className="text-sm text-gray-600">{shareDescription}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <FacebookShareButton url={shareUrl} quote={shareTitle}><FacebookIcon size={48} round /></FacebookShareButton>
-                <TwitterShareButton url={shareUrl} title={shareTitle}><TwitterIcon size={48} round /></TwitterShareButton>
-                <WhatsappShareButton url={shareUrl} title={`${shareTitle}\n${shareDescription}`}><WhatsappIcon size={48} round /></WhatsappShareButton>
-                <EmailShareButton url={shareUrl} subject={shareTitle} body={`${shareDescription}\n\nRead more: ${shareUrl}`}><EmailIcon size={48} round /></EmailShareButton>
-              </div>
-              <div className="flex items-center">
-                <input type="text" value={shareUrl} readOnly className="flex-1 p-2 border-2 border-amber-200 rounded-l-md text-gray-600" />
-                <button onClick={copyLink} className="bg-amber-600 text-white px-4 py-2 rounded-r-md hover:bg-amber-700">Copy</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default FolktaleDetail;
+export default router;
