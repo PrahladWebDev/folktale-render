@@ -1,5 +1,3 @@
-import mongoose from 'mongoose';
-
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -43,19 +41,6 @@ const userSchema = new mongoose.Schema({
   },
   profileImageUrl: {
     type: String,
-    default: null,
-  },
-  isSubscribed: {
-    type: Boolean,
-    default: false,
-  },
-  subscriptionPlan: {
-    type: String,
-    enum: ['monthly', 'yearly', null],
-    default: null,
-  },
-  subscriptionExpires: {
-    type: Date,
     default: null,
   },
 }, {
