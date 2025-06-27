@@ -638,6 +638,7 @@ router.get('/me', auth, async (req, res) => {
 // Create Subscription Order
 router.post('/create-subscription-order', auth, async (req, res) => {
   try {
+    console.log('Creating subscription order for plan:', req.body.plan, 'User:', req.user.email);
     const { plan } = req.body;
     if (!['monthly', 'yearly'].includes(plan)) {
       return res.status(400).json({
@@ -645,7 +646,6 @@ router.post('/create-subscription-order', auth, async (req, res) => {
         errors: [{ field: 'plan', message: 'Plan must be either monthly or yearly' }],
       });
     }
-
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({
@@ -653,18 +653,26 @@ router.post('/create-subscription-order', auth, async (req, res) => {
         errors: [{ field: 'user', message: 'Authenticated user not found' }],
       });
     }
-
     if (user.isSubscribed && user.subscriptionExpires > Date.now()) {
       return res.status(400).json({
         message: 'Active subscription already exists',
         errors: [{ field: 'subscription', message: 'You already have an active subscription' }],
       });
     }
-
-    const amount = plan === 'monthly' ? 10000 : 100000; // ₹100 for monthly, ₹1000 for yearly (in paise)
-    const period = plan === 'monthly' ? 'monthly' : 'yearly';
-    const interval = 1;
-
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      console.error('Razorpay keys missing:', { keyId: razorpayKeyId, keySecret: razorpayKeySecret ? '******' : 'NOT SET' });
+      return res.status(500).json({
+        message: 'Server configuration error',
+        errors: [{ field: 'server', message: 'Razorpay credentials are not configured' }],
+      });
+    }
+    const amount = plan === 'monthly' ? 10000 : 100000;
+    console.log('Sending Razorpay request:', {
+      amount,
+      currency: 'INR',
+      receipt: `receipt_${user._id}_${Date.now()}`,
+      keyId: razorpayKeyId,
+    });
     const response = await axios.post(
       'https://api.razorpay.com/v1/orders',
       {
@@ -679,7 +687,7 @@ router.post('/create-subscription-order', auth, async (req, res) => {
         },
       }
     );
-
+    console.log('Razorpay order created:', response.data);
     res.json({
       orderId: response.data.id,
       amount: response.data.amount,
@@ -687,14 +695,22 @@ router.post('/create-subscription-order', auth, async (req, res) => {
       plan,
     });
   } catch (error) {
-    console.error('❌ Create Subscription Order Error:', error);
+    console.error('❌ Create Subscription Order Error:', {
+      message: error.message,
+      stack: error.stack,
+      status: error.response?.status,
+      razorpayError: error.response?.data?.error,
+    });
     res.status(500).json({
       message: 'Failed to create subscription order',
-      errors: [{ field: 'server', message: error.response?.data?.error?.description || error.message }],
+      errors: [{
+        field: 'server',
+        message: error.response?.data?.error?.description || error.message,
+        code: error.response?.data?.error?.code,
+      }],
     });
   }
 });
-
 // Verify Subscription Payment
 router.post('/verify-subscription', auth, async (req, res) => {
   try {
