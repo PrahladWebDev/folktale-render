@@ -667,10 +667,11 @@ router.post('/create-subscription-order', auth, async (req, res) => {
       });
     }
     const amount = plan === 'monthly' ? 10000 : 100000;
+    const receipt = `receipt_${user._id}_${Date.now()}`;
     console.log('Sending Razorpay request:', {
       amount,
       currency: 'INR',
-      receipt: `receipt_${user._id}_${Date.now()}`,
+      receipt,
       keyId: razorpayKeyId,
     });
     const response = await axios.post(
@@ -678,12 +679,16 @@ router.post('/create-subscription-order', auth, async (req, res) => {
       {
         amount,
         currency: 'INR',
-        receipt: `receipt_${user._id}_${Date.now()}`,
+        receipt,
       },
       {
         auth: {
           username: razorpayKeyId,
           password: razorpayKeySecret,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       }
     );
@@ -699,18 +704,17 @@ router.post('/create-subscription-order', auth, async (req, res) => {
       message: error.message,
       stack: error.stack,
       status: error.response?.status,
-      razorpayError: error.response?.data?.error,
+      razorpayError: error.response?.data?.error || 'No error details provided',
     });
-    res.status(500).json({
+    const errorMessage = error.response?.data?.error?.description || error.message;
+    const errorCode = error.response?.data?.error?.code || 'UNKNOWN_ERROR';
+    res.status(error.response?.status || 500).json({
       message: 'Failed to create subscription order',
-      errors: [{
-        field: 'server',
-        message: error.response?.data?.error?.description || error.message,
-        code: error.response?.data?.error?.code,
-      }],
+      errors: [{ field: 'server', message: errorMessage, code: errorCode }],
     });
   }
 });
+
 // Verify Subscription Payment
 router.post('/verify-subscription', auth, async (req, res) => {
   try {
