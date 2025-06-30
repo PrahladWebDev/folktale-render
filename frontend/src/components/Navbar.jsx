@@ -105,23 +105,21 @@ function Navbar() {
             </div>
           </div>
 
-          {/* Profile */}
-          {user.username && (
-            <button
-              onClick={() => navigate("/profile")}
-              className="hover:scale-105 transition-transform"
-              title="Profile"
-            >
-              {renderProfileIcon()}
-            </button>
-          )}
-
-          {/* Account dropdown */}
+          {/* Account dropdown (with profile) */}
           <div className="relative group">
             <button className="px-4 py-2 bg-amber-900 text-white rounded-md hover:bg-amber-800 transition">
               Account ▼
             </button>
             <div className="absolute hidden group-hover:flex flex-col bg-white shadow-lg rounded-md mt-1 right-0 min-w-[160px] opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">
+              {user.username && (
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-amber-100 text-left"
+                >
+                  {renderProfileIcon()} <span>Profile</span>
+                </button>
+              )}
+
               {token ? (
                 <>
                   {isAdmin && (
@@ -191,9 +189,10 @@ function Navbar() {
             </button>
           </div>
 
-          {user.username && (
-            <div className="pt-2 border-t border-amber-300">
-              <p className="text-sm font-semibold text-amber-700">User</p>
+          <div className="pt-2 border-t border-amber-300">
+            <p className="text-sm font-semibold text-amber-700">Account</p>
+
+            {user.username && (
               <button
                 onClick={() => {
                   navigate("/profile");
@@ -201,14 +200,10 @@ function Navbar() {
                 }}
                 className="flex items-center gap-2 px-4 py-2"
               >
-                {renderProfileIcon()}
-                <span>Profile</span>
+                {renderProfileIcon()} <span>Profile</span>
               </button>
-            </div>
-          )}
+            )}
 
-          <div className="pt-2 border-t border-amber-300">
-            <p className="text-sm font-semibold text-amber-700">Account</p>
             {token ? (
               <>
                 {isAdmin && (
