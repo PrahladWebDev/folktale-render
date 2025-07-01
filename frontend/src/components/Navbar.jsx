@@ -82,7 +82,7 @@ function Navbar() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          Legend 𝓢𝓪𝓷𝓼𝓪𝓻
+          𝑳𝒆𝒈𝒆𝒏𝒅 𝑺𝒂𝒏𝒔𝒂𝒓
         </motion.h1>
 
         {/* Toggle button for mobile */}
