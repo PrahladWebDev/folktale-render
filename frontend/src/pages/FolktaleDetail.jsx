@@ -543,7 +543,7 @@ function FolktaleDetail() {
 
         {token && (
           <div className="p-6 bg-amber-50 rounded-lg border-2 border-amber-200 my-10">
-            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this folktale</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-amber-900 mb-4">Rate this legend</h3>
             <div className="flex gap-4 items-center flex-wrap">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
