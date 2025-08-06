@@ -136,10 +136,10 @@ function FolktaleDetail() {
   const imageRef = useRef(null);
 
   const shareUrl = `${window.location.origin}/folktale/${id}`;
-  const shareTitle = folktale?.title || 'Discover a Fascinating Folktale!';
+  const shareTitle = folktale?.title || 'Discover a Fascinating Legend!';
   const shareDescription = folktale?.content
     ? `${folktale.content.replace(/<[^>]+>/g, '').slice(0, 160)}... Read more at ${window.location.origin}!`
-    : 'Explore a captivating folktale from around the world. Dive into the story now!';
+    : 'Explore a captivating Legend from around the world. Dive into the story now!';
   const shareImage = folktale?.imageUrl || 'https://via.placeholder.com/800x400?text=Folktale+Image';
 
   useEffect(() => {
