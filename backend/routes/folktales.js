@@ -368,21 +368,21 @@ router.post(
 
       const folktale = await Folktale.findById(folktaleId);
       if (!folktale) {
-        return res.status(404).json({ message: 'Folktale not found' });
+        return res.status(404).json({ message: 'Legend not found' });
       }
 
       const existingRating = folktale.ratings.find(
         (r) => r.userId.toString() === userId
       );
       if (existingRating) {
-        return res.status(400).json({ message: 'You have already rated this folktale' });
+        return res.status(400).json({ message: 'You have already rated this legend' });
       }
 
       folktale.ratings.push({ userId, rating });
       await folktale.save();
       res.json(folktale);
     } catch (error) {
-      console.error('Error rating folktale:', error);
+      console.error('Error rating legend:', error);
       res.status(500).json({ message: 'Server error' });
     }
   }
