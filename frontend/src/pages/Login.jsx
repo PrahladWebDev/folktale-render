@@ -4,8 +4,8 @@ import axios from 'axios';
 import SearchBar from '../components/SearchBar';
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('guest@gmail.com');
+  const [password, setPassword] = useState('guest1234');
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
