@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -27,6 +26,7 @@ function Profile() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const token = localStorage.getItem("token");
   const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dvws2chvw/image/upload/v1750929194/user_profiles/jwkack4vcko50qfaawfn.png";
+  const isGuestUser = user.email === "guest@gmail.com"; // Check if user is guest
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -78,6 +78,10 @@ function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isGuestUser) {
+      setErrors([{ field: 'general', message: 'Guest users cannot update their profile' }]);
+      return;
+    }
     setMessage("");
     setErrors([]);
     setIsUploading(true);
@@ -267,7 +271,7 @@ function Profile() {
             </div>
           </motion.div>
 
-          {isEditing ? (
+          {isEditing && !isGuestUser ? (
             <motion.form
               variants={containerVariants}
               onSubmit={handleSubmit}
@@ -396,14 +400,20 @@ function Profile() {
             </motion.form>
           ) : (
             <motion.div variants={itemVariants} className="pt-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsEditing(true)}
-                className="w-full px-4 py-3 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 shadow-md transition-all duration-300 flex items-center justify-center gap-2"
-              >
-                <FaUserEdit /> Edit Profile
-              </motion.button>
+              {!isGuestUser ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsEditing(true)}
+                  className="w-full px-4 py-3 rounded-md bg-amber-900 text-white font-semibold hover:bg-amber-800 shadow-md transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <FaUserEdit /> Edit Profile
+                </motion.button>
+              ) : (
+                <p className="text-center text-gray-600 text-sm">
+                  Guest users cannot edit their profile.
+                </p>
+              )}
             </motion.div>
           )}
         </motion.div>
