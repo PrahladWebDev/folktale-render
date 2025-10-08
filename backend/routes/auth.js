@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import cloudinary from '../config/cloudinary.js';
 import multer from 'multer';
 import fs from 'fs/promises';
@@ -13,31 +13,8 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
-// Setup Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: 'mail.webdevprahlad.site',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// Verify transporter
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ SMTP Transporter Error:', error);
-  } else {
-    console.log('✅ SMTP Transporter is ready to send emails');
-  }
-});
-
-// Debug (only for development)
-console.log('📧 Email Config:', {
-  EMAIL_USER: process.env.EMAIL_USER,
-  EMAIL_PASS: process.env.EMAIL_PASS ? '******' : 'NOT SET',
-});
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Multer setup for image uploads
 const storage = multer.diskStorage({
@@ -155,8 +132,7 @@ const validate = (req, res, next) => {
 router.post('/register', upload, validateRegister, validate, async (req, res) => {
   try {
     const { username, email, password, isAdmin } = req.body;
-
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
       throw new Error('Email configuration is missing');
     }
 
@@ -201,46 +177,39 @@ router.post('/register', upload, validateRegister, validate, async (req, res) =>
     await user.save();
 
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    const mailOptions = {
-      from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
+        <p style="font-size: 16px; color: #555;">
+          Thank you for registering. Please click the button below to verify your email address.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Verify Email
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #888;">
+          If the button doesn't work, copy and paste this link into your browser: <br>
+          <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
+        </p>
+        <p style="font-size: 14px; color: #888;">
+          If you didn’t request this, you can ignore this email.
+        </p>
+        <hr style="margin-top: 40px;">
+        <p style="font-size: 12px; color: #aaa; text-align: center;">
+          © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+        </p>
+      </div>
+    `;
+
+    const response = await resend.emails.send({
+      from: process.env.EMAIL_FROM,
       to: email,
       subject: 'Verify Your Email Address',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
-          <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
-          <p style="font-size: 16px; color: #555;">
-            Thank you for registering. Please click the button below to verify your email address.
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              Verify Email
-            </a>
-          </div>
-          <p style="font-size: 14px; color: #888;">
-            If the button doesn't work, copy and paste this link into your browser: <br>
-            <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
-          </p>
-          <p style="font-size: 14px; color: #888;">
-            If you didn’t request this, you can ignore this email.
-          </p>
-          <hr style="margin-top: 40px;">
-          <p style="font-size: 12px; color: #aaa; text-align: center;">
-            © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
-          </p>
-        </div>
-      `,
-    };
-
-    await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          reject(new Error(`Failed to send verification email: ${err.message}`));
-        } else {
-          console.log('✅ Email sent:', info.response);
-          resolve();
-        }
-      });
+      html,
     });
+
+    console.log('✅ Email sent:', response);
 
     res.status(201).json({ message: 'Registration successful, verification link sent to email' });
   } catch (error) {
@@ -293,6 +262,7 @@ router.post('/resend-verification', validateForgotPassword, validate, async (req
         errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
+
     if (user.isVerified) {
       return res.status(400).json({
         message: 'Email already verified',
@@ -305,46 +275,39 @@ router.post('/resend-verification', validateForgotPassword, validate, async (req
     await user.save();
 
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    const mailOptions = {
-      from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
+        <p style="font-size: 16px; color: #555;">
+          Please click the button below to verify your email address.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Verify Email
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #888;">
+          If the button doesn't work, copy and paste this link into your browser: <br>
+          <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
+        </p>
+        <p style="font-size: 14px; color: #888;">
+          If you didn’t request this, you can ignore this email.
+        </p>
+        <hr style="margin-top: 40px;">
+        <p style="font-size: 12px; color: #aaa; text-align: center;">
+          © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+        </p>
+      </div>
+    `;
+
+    const response = await resend.emails.send({
+      from: process.env.EMAIL_FROM,
       to: email,
       subject: 'Verify Your Email Address',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
-          <h2 style="color: #333;">👋 Welcome to Legend Sansar!</h2>
-          <p style="font-size: 16px; color: #555;">
-            Please click the button below to verify your email address.
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="background-color: #2c3e50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              Verify Email
-            </a>
-          </div>
-          <p style="font-size: 14px; color: #888;">
-            If the button doesn't work, copy and paste this link into your browser: <br>
-            <a href="${verificationUrl}" style="color: #2c3e50;">${verificationUrl}</a>
-          </p>
-          <p style="font-size: 14px; color: #888;">
-            If you didn’t request this, you can ignore this email.
-          </p>
-          <hr style="margin-top: 40px;">
-          <p style="font-size: 12px; color: #aaa; text-align: center;">
-            © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
-          </p>
-        </div>
-      `,
-    };
-
-    await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          reject(new Error(`Failed to send verification email: ${err.message}`));
-        } else {
-          console.log('✅ Email sent:', info.response);
-          resolve();
-        }
-      });
+      html,
     });
+
+    console.log('✅ Email sent:', response);
 
     res.status(200).json({ message: 'Verification link sent to email' });
   } catch (error) {
@@ -367,6 +330,7 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
         errors: [{ field: 'email', message: 'No user found with this email' }],
       });
     }
+
     if (!user.isVerified) {
       return res.status(400).json({
         message: 'Email not verified',
@@ -381,40 +345,33 @@ router.post('/forgot-password', validateForgotPassword, validate, async (req, re
 
     console.log('Generated OTP:', otp); // Debug log to verify OTP
 
-    await new Promise((resolve, reject) => {
-      const mailOptions = {
-        from: `"Legend Sansar" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Password Reset OTP',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
-            <h2 style="color: #333;">🔒 Password Reset Request</h2>
-            <p style="font-size: 16px; color: #555;">
-              You requested a password reset. Please use the OTP below to reset your password. This OTP is valid for <strong>10 minutes</strong>.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
-            </div>
-            <p style="font-size: 14px; color: #888;">
-              If you didn’t request this, you can ignore this email.
-            </p>
-            <hr style="margin-top: 40px;">
-            <p style="font-size: 12px; color: #aaa; text-align: center;">
-              © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
-            </p>
-          </div>
-        `,
-      };
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">🔒 Password Reset Request</h2>
+        <p style="font-size: 16px; color: #555;">
+          You requested a password reset. Please use the OTP below to reset your password. This OTP is valid for <strong>10 minutes</strong>.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="font-size: 30px; font-weight: bold; color: #2c3e50; letter-spacing: 5px;">${otp}</span>
+        </div>
+        <p style="font-size: 14px; color: #888;">
+          If you didn’t request this, you can ignore this email.
+        </p>
+        <hr style="margin-top: 40px;">
+        <p style="font-size: 12px; color: #aaa; text-align: center;">
+          © ${new Date().getFullYear()} Legend Sansar. All rights reserved.
+        </p>
+      </div>
+    `;
 
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          reject(new Error(`Failed to send OTP email: ${err.message}`));
-        } else {
-          console.log('✅ Email sent:', info.response);
-          resolve();
-        }
-      });
+    const response = await resend.emails.send({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: 'Password Reset OTP',
+      html,
     });
+
+    console.log('✅ Email sent:', response);
 
     res.status(200).json({ message: 'OTP sent to email' });
   } catch (error) {
@@ -439,7 +396,6 @@ router.post('/reset-password', validateResetPassword, validate, async (req, res)
     }
 
     console.log('Stored OTP:', user.otp, 'Received OTP:', otp); // Debug log
-
     // Ensure OTP is compared as strings and trimmed
     if (user.otp !== otp.toString().trim()) {
       return res.status(400).json({
@@ -527,6 +483,7 @@ router.put('/update-profile', auth, upload, validateUpdateProfile, validate, asy
     }
 
     await user.save();
+
     res.json({
       message: 'Profile updated successfully',
       user: {
@@ -605,6 +562,7 @@ router.get('/me', auth, async (req, res) => {
         errors: [{ field: 'user', message: 'Authenticated user not found' }],
       });
     }
+
     res.json({
       message: 'Profile retrieved successfully',
       user,
